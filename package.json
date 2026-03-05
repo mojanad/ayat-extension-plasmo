@@ -1,0 +1,59 @@
+{
+  "name": "ayat",
+  "displayName": "Ayat",
+  "version": "1.2.0",
+  "description": "Daily Ayat — gentle reminders with verses from the Holy Quran on your browsing journey.",
+  "scripts": {
+    "predev": "mkdir -p build/chrome-mv3-dev/assets/fonts/Amiri_Quran build/chrome-mv3-dev/assets/fonts/UthmanicHafs && cp assets/fonts/Amiri_Quran/AmiriQuran-Regular.ttf build/chrome-mv3-dev/assets/fonts/Amiri_Quran/ && cp 'assets/fonts/UthmanicHafs/KFGQPC Uthmanic Script HAFS.otf' build/chrome-mv3-dev/assets/fonts/UthmanicHafs/",
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "postbuild": "mkdir -p build/chrome-mv3-prod/assets/fonts/Amiri_Quran build/chrome-mv3-prod/assets/fonts/UthmanicHafs && cp assets/fonts/Amiri_Quran/AmiriQuran-Regular.ttf build/chrome-mv3-prod/assets/fonts/Amiri_Quran/ && cp 'assets/fonts/UthmanicHafs/KFGQPC Uthmanic Script HAFS.otf' build/chrome-mv3-prod/assets/fonts/UthmanicHafs/",
+    "package": "plasmo package"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^1.6.1",
+    "plasmo": "^0.90.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "@types/node": "^22.13.10",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.7.3"
+  },
+  "manifest": {
+    "action": {
+      "default_icon": {
+        "16": "../assets/ayat-fav-icon-dark.png",
+        "32": "../assets/ayat-fav-icon-dark.png",
+        "48": "../assets/ayat-fav-icon-dark.png",
+        "64": "../assets/ayat-fav-icon-dark.png",
+        "128": "../assets/ayat-fav-icon-dark.png"
+      },
+      "default_popup": "popup.html"
+    },
+    "host_permissions": [
+      "https://quranenc.com/*"
+    ],
+    "permissions": [
+      "storage",
+      "activeTab"
+    ],
+    "web_accessible_resources": [
+      {
+        "resources": [
+          "assets/fonts/*"
+        ],
+        "matches": [
+          "http://*/*",
+          "https://*/*"
+        ]
+      }
+    ]
+  }
+}

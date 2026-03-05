@@ -1,0 +1,916 @@
+import cssText from "data-text:../style.css"
+import type { PlasmoCSConfig, PlasmoGetStyle } from "plasmo"
+import React, { useCallback, useEffect, useRef, useState } from "react"
+import logoUrl from "data-base64:../../assets/icon-dark.png"
+import { Analytics } from "@vercel/analytics/next"
+import { allSurahs, quraa } from "../data"
+import { type Language, type Theme, getConfig, getHostname } from "../storage"
+
+export const config: PlasmoCSConfig = {
+  matches: ["http://*/*", "https://*/*"]
+}
+
+export const getStyle: PlasmoGetStyle = () => {
+  const style = document.createElement("style")
+  style.textContent = cssText
+  return style
+}
+
+const CloseSvg = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-4 w-4"
+  >
+    <path d="M18 6L6 18M6 6l12 12" />
+  </svg>
+)
+
+const CollapseSvg = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-4 w-4"
+  >
+    <polyline points="4 14 10 14 10 20" />
+    <polyline points="20 10 14 10 14 4" />
+    <line x1="14" y1="10" x2="21" y2="3" />
+    <line x1="3" y1="21" x2="10" y2="14" />
+  </svg>
+)
+
+const CopySvg = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-3.5 w-3.5"
+  >
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+)
+
+const CameraIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-3.5 w-3.5"
+  >
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <circle cx="12" cy="13" r="4" />
+  </svg>
+)
+
+const QuranSvg = () => (
+  <svg
+    viewBox="0 0 200 200"
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-6 w-6"
+  >
+    <path
+      d="M100,20 C55.82,20 20,55.82 20,100 C20,144.18 55.82,180 100,180 C118.35,180 135.15,173.81 148.54,163.41 C115.21,168.14 83.33,142.5 83.33,100 C83.33,57.5 115.21,31.86 148.54,36.59 C135.15,26.19 118.35,20 100,20 Z"
+      fill="currentColor"
+    />
+    <path
+      d="M145,75 L151.47,88.11 L165.94,90.22 L155.47,100.42 L157.94,114.83 L145,108.03 L132.06,114.83 L134.53,100.42 L124.06,90.22 L138.53,88.11 Z"
+      fill="currentColor"
+    />
+  </svg>
+)
+
+const PlaySvg = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+)
+
+const PauseSvg = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+    <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
+  </svg>
+)
+
+const CheckSvg = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-3.5 w-3.5"
+  >
+    <path d="M20 6L9 17l-5-5" />
+  </svg>
+)
+
+/** Pads a number to 3 digits: 1 → "001", 12 → "012", 114 → "114" */
+function pad3(n: number): string {
+  return n.toString().padStart(3, "0")
+}
+
+function getAudioUrl(
+  subfolder: string,
+  surahNumber: number,
+  ayahNumber: number
+): string {
+  return `https://everyayah.com/data/${subfolder}/${pad3(surahNumber)}${pad3(ayahNumber)}.mp3`
+}
+
+interface AyahData {
+  arabicText: string
+  translation: string
+  surahName: string
+  surahArabicName: string
+  surahNumber: number
+  ayahNumber: number
+  juzNumber: number
+}
+
+type ViewState = "loading" | "toast" | "minimized" | "hidden"
+
+function AyatToast() {
+  const [ayahData, setAyahData] = useState<AyahData | null>(null)
+  const [viewState, setViewState] = useState<ViewState>("loading")
+  const [dismissing, setDismissing] = useState(false)
+  const [allowed, setAllowed] = useState(true)
+  const [language, setLanguage] = useState<Language>("ar")
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [reciter, setReciter] = useState("67")
+  const [theme, setTheme] = useState<Theme>("light")
+  const [copied, setCopied] = useState(false)
+  const [capturedImage, setCapturedImage] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const toastRef = useRef<HTMLDivElement>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const hoveringRef = useRef(false)
+  const remainingRef = useRef<number>(0)
+  const timerStartRef = useRef<number>(0)
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
+  }, [])
+
+  // Load Arabic fonts into the main page (not shadow DOM) for both toast body and canvas
+  useEffect(() => {
+    const amiriFontUrl = chrome.runtime.getURL(
+      "assets/fonts/Amiri_Quran/AmiriQuran-Regular.ttf"
+    )
+    const uthmanicFontUrl = chrome.runtime.getURL(
+      "assets/fonts/UthmanicHafs/KFGQPC Uthmanic Script HAFS.otf"
+    )
+
+    // 1. Inject @font-face into the main page's <head> so CSS font-family works
+    const styleId = "ayat-arabic-fonts"
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style")
+      style.id = styleId
+      style.textContent = `
+        @font-face {
+          font-family: 'Amiri Quran';
+          font-style: normal;
+          font-weight: 400;
+          font-display: swap;
+          src: url('${amiriFontUrl}') format('truetype');
+        }
+        @font-face {
+          font-family: 'UthmanicHafs';
+          font-style: normal;
+          font-weight: 400;
+          font-display: swap;
+          src: url('${uthmanicFontUrl}') format('opentype');
+        }
+      `
+      document.head.appendChild(style)
+    }
+
+    // 2. Also load via FontFace API so Canvas can use it reliably
+    async function loadFontApi() {
+      try {
+        if (typeof FontFace === "undefined" || !document.fonts) return
+        // Load Amiri Quran
+        const amiriResp = await fetch(amiriFontUrl)
+        const amiriBuffer = await amiriResp.arrayBuffer()
+        const amiriFace = new FontFace("Amiri Quran", amiriBuffer)
+        await amiriFace.load()
+        document.fonts.add(amiriFace)
+        // Load UthmanicHafs
+        const uthmanicResp = await fetch(uthmanicFontUrl)
+        const uthmanicBuffer = await uthmanicResp.arrayBuffer()
+        const uthmanicFace = new FontFace("UthmanicHafs", uthmanicBuffer)
+        await uthmanicFace.load()
+        document.fonts.add(uthmanicFace)
+      } catch (e) {
+        console.error("Ayat: FontFace API load failed", e)
+      }
+    }
+    loadFontApi()
+  }, [])
+
+  // Hide the Plasmo container when we don't want to show anything
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+
+    let plasmoContainer = el.closest("[id^='plasmo-']") as HTMLElement | null
+    if (!plasmoContainer) {
+      const root = el.getRootNode() as ShadowRoot
+      if (root?.host) {
+        plasmoContainer = root.host as HTMLElement
+      }
+    }
+
+    if (plasmoContainer) {
+      const shouldHide = viewState === "hidden" || viewState === "loading"
+      plasmoContainer.style.display = shouldHide ? "none" : ""
+    }
+  }, [viewState])
+
+  // Check if the extension is enabled and current site is not excluded
+  useEffect(() => {
+    async function checkConfig() {
+      try {
+        const cfg = await getConfig()
+        const hostname = getHostname(window.location.href)
+        setLanguage(cfg.language)
+        setReciter(cfg.reciter || "67")
+        setTheme(cfg.theme || "light")
+
+        if (!cfg.enabled || cfg.excludedSites.includes(hostname)) {
+          setAllowed(false)
+          setViewState("hidden")
+          return
+        }
+
+        setAllowed(true)
+        fetchAyah()
+      } catch (err) {
+        console.error("Ayat: failed to load config", err)
+        fetchAyah()
+      }
+    }
+
+    checkConfig()
+  }, [])
+
+  // Listen for config changes in real-time
+  useEffect(() => {
+    function onStorageChange(changes: {
+      [key: string]: chrome.storage.StorageChange
+    }) {
+      if (changes.ayatConfig) {
+        const newConfig = changes.ayatConfig.newValue
+        const hostname = getHostname(window.location.href)
+
+        if (newConfig.language) {
+          setLanguage(newConfig.language)
+        }
+        if (newConfig.reciter) {
+          setReciter(newConfig.reciter)
+        }
+        if (newConfig.theme) {
+          setTheme(newConfig.theme)
+        }
+
+        if (!newConfig.enabled || newConfig.excludedSites.includes(hostname)) {
+          setAllowed(false)
+          setViewState("hidden")
+          stopAudio()
+        } else if (!allowed && newConfig.enabled) {
+          setAllowed(true)
+          if (ayahData) {
+            setViewState("minimized")
+          } else {
+            fetchAyah()
+          }
+        }
+      }
+    }
+
+    chrome.storage.onChanged.addListener(onStorageChange)
+    return () => chrome.storage.onChanged.removeListener(onStorageChange)
+  }, [allowed, ayahData])
+
+  function fetchAyah() {
+    const surah = allSurahs[Math.floor(Math.random() * allSurahs.length)]
+    const ayahNumber = Math.floor(Math.random() * surah.ayah_count) + 1
+
+    // Determine juz number from the surah's juz ranges
+    const juzEntry = surah.juz.find(
+      (j) => ayahNumber >= j.from_ayah && ayahNumber <= j.to_ayah
+    )
+    const juzNumber = juzEntry ? juzEntry.juz : surah.juz[0].juz
+
+    fetch(
+      `https://quranenc.com/api/v1/translation/aya/english_saheeh/${surah.number}/${ayahNumber}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        setAyahData({
+          arabicText: data.result.arabic_text,
+          translation: data.result.translation,
+          surahName: surah.name,
+          surahArabicName: surah.arabic_name,
+          surahNumber: surah.number,
+          ayahNumber: ayahNumber,
+          juzNumber: juzNumber
+        })
+        setViewState("toast")
+      })
+      .catch((err) => {
+        console.error("Ayat: failed to fetch ayah", err)
+      })
+  }
+
+  function toggleAudio() {
+    if (!ayahData) return
+
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+      return
+    }
+
+    // If there's an existing audio element, resume from where it stopped
+    if (audioRef.current) {
+      audioRef.current.play()
+      setIsPlaying(true)
+      return
+    }
+
+    // Create new audio element
+    const subfolder = quraa[reciter]?.subfolder || quraa["67"].subfolder
+    const url = getAudioUrl(
+      subfolder,
+      ayahData.surahNumber,
+      ayahData.ayahNumber
+    )
+    const audio = new Audio(url)
+    audioRef.current = audio
+
+    audio.addEventListener("ended", () => {
+      setIsPlaying(false)
+    })
+
+    audio.addEventListener("error", () => {
+      console.error("Ayat: failed to load audio")
+      setIsPlaying(false)
+    })
+
+    audio.play()
+    setIsPlaying(true)
+  }
+
+  function stopAudio() {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      audioRef.current = null
+      setIsPlaying(false)
+    }
+  }
+
+  // Copy ayah text with details
+  function copyText() {
+    if (!ayahData) return
+    const surahName =
+      language === "ar" ? ayahData.surahArabicName : ayahData.surahName
+    const text = language === "ar" ? ayahData.arabicText : ayahData.translation
+    const label = language === "ar" ? "آية" : "Ayah"
+    const juzLabel = language === "ar" ? "الجزء" : "Juz"
+    const copyStr = `${text}\n\n— ${surahName} , ${label} ${ayahData.ayahNumber} [${juzLabel} ${ayahData.juzNumber}]`
+
+    navigator.clipboard
+      .writeText(copyStr)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch(() => {
+        console.error("Ayat: failed to copy text")
+      })
+  }
+
+  // Save toast as PNG image to device
+  async function copyAsImage() {
+    if (!ayahData) return
+
+    // Wait for fonts to be ready for canvas
+    if (document.fonts) {
+      await document.fonts.ready
+      // Ensure UthmanicHafs is loaded for canvas
+      const uthmanicLoaded = document.fonts.check("34px 'UthmanicHafs'")
+      if (!uthmanicLoaded) {
+        try {
+          const url = chrome.runtime.getURL(
+            "assets/fonts/UthmanicHafs/KFGQPC Uthmanic Script HAFS.otf"
+          )
+          const resp = await fetch(url)
+          const buf = await resp.arrayBuffer()
+          const face = new FontFace("UthmanicHafs", buf)
+          await face.load()
+          document.fonts.add(face)
+        } catch (e) {
+          console.error("Ayat: Failed to load UthmanicHafs for canvas", e)
+        }
+      }
+    }
+    const isDark = theme === "dark"
+    const text = language === "ar" ? ayahData.arabicText : ayahData.translation
+    const version = chrome.runtime.getManifest().version
+
+    const canvas = document.createElement("canvas")
+    const scale = 2
+    const maxWidth = 800
+    const padding = 60
+    const footerHeight = 36 // space for footer outside frame
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    // Colors matching sirahbooks.com theme
+    const bgColor = isDark ? "#0F1C2C" : "#F1ECE4"
+    const gold = "#D6A54A"
+    const textColor = isDark ? "#F1ECE4" : "#0F1C2C"
+    const mutedColor = isDark ? "rgba(241,236,228,0.4)" : "rgba(15,28,44,0.4)"
+
+    // Arabic numbers and markers
+    const toArabicNumber = (n: number) =>
+      n.toString().replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d as any])
+
+    const bismillahText =
+      language === "ar"
+        ? "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+        : "In the name of Allah, the Entirely Merciful, the Especially Merciful."
+
+    // Skip Bismillah for Surah At-Tawbah (9) and Al-Fatiha Ayah 1 (already included)
+    const showBismillah = !(
+      ayahData.surahNumber === 9 ||
+      (ayahData.surahNumber === 1 && ayahData.ayahNumber === 1)
+    )
+
+    const ayahMark =
+      language === "ar"
+        ? ` ﴿${toArabicNumber(ayahData.ayahNumber)}﴾`
+        : ` (${ayahData.ayahNumber})`
+    const mainText = `${text}${ayahMark}`
+
+    const surahText =
+      language === "ar"
+        ? `سُورَةُ ${ayahData.surahArabicName}`
+        : `Surah ${ayahData.surahName}`
+
+    const infoText =
+      language === "ar"
+        ? `الجزء ${toArabicNumber(ayahData.juzNumber)}  ·  آية ${toArabicNumber(ayahData.ayahNumber)}`
+        : `Juz ${ayahData.juzNumber}  ·  Ayah ${ayahData.ayahNumber}`
+
+    // Measure text
+    canvas.width = maxWidth * scale
+    canvas.height = 1000 * scale // temp height
+    ctx.scale(scale, scale)
+    ctx.direction = language === "ar" ? "rtl" : "ltr"
+    ctx.font =
+      language === "ar"
+        ? "normal 34px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
+        : "normal 26px 'Inter', sans-serif"
+
+    // Word-wrap logic
+    const words = mainText.split(/\s+/)
+    const lines: string[] = []
+    let currentLine = ""
+    const contentWidth = maxWidth - padding * 2.5
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word
+      if (ctx.measureText(testLine).width > contentWidth && currentLine) {
+        lines.push(currentLine)
+        currentLine = word
+      } else {
+        currentLine = testLine
+      }
+    }
+    if (currentLine) lines.push(currentLine)
+
+    // Calculate dynamic heights
+    const bismillahHeight = showBismillah ? 60 : 0
+    const lineHeight = language === "ar" ? 64 : 44
+    const textHeight = lines.length * lineHeight
+    const surahHeight = 40
+    const infoHeight = 30
+    const frameHeight =
+      padding +
+      bismillahHeight +
+      (showBismillah ? 20 : 0) +
+      textHeight +
+      20 +
+      surahHeight +
+      10 +
+      infoHeight +
+      padding
+    const totalHeight = frameHeight + footerHeight
+
+    // Re-init canvas with actual calculated height
+    canvas.width = maxWidth * scale
+    canvas.height = totalHeight * scale
+    ctx.scale(scale, scale)
+
+    // 1. Draw Background
+    ctx.fillStyle = bgColor
+    ctx.fillRect(0, 0, maxWidth, totalHeight)
+
+    // 2. Draw Elegant Double Border (only around frameHeight)
+    ctx.strokeStyle = gold
+    // Outer border
+    ctx.lineWidth = 3
+    ctx.strokeRect(16, 16, maxWidth - 32, frameHeight - 32)
+    // Inner border
+    ctx.lineWidth = 1
+    ctx.strokeRect(24, 24, maxWidth - 48, frameHeight - 48)
+
+    // 3. Draw Corner Ornaments
+    const drawCorner = (cx: number, cy: number, rot: number) => {
+      ctx.save()
+      ctx.translate(cx, cy)
+      ctx.rotate(rot)
+
+      // Mask out the inner intersection
+      ctx.fillStyle = bgColor
+      ctx.fillRect(-4, -4, 30, 30)
+
+      // Ornate outer curve
+      ctx.strokeStyle = gold
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.moveTo(26, 0)
+      ctx.quadraticCurveTo(26, 26, 0, 26)
+      ctx.stroke()
+
+      // Ornate inner curve
+      ctx.beginPath()
+      ctx.moveTo(18, 0)
+      ctx.quadraticCurveTo(18, 18, 0, 18)
+      ctx.stroke()
+
+      // Center decorative dot
+      ctx.fillStyle = gold
+      ctx.beginPath()
+      ctx.arc(8, 8, 2.5, 0, Math.PI * 2)
+      ctx.fill()
+
+      ctx.restore()
+    }
+
+    drawCorner(24, 24, 0) // top-left
+    drawCorner(maxWidth - 24, 24, Math.PI / 2) // top-right
+    drawCorner(maxWidth - 24, frameHeight - 24, Math.PI) // bottom-right
+    drawCorner(24, frameHeight - 24, -Math.PI / 2) // bottom-left
+
+    // 4. Draw Typography
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+    ctx.direction = language === "ar" ? "rtl" : "ltr"
+
+    let currentY = padding + (showBismillah ? 30 : 0)
+
+    // Bismillah
+    if (showBismillah) {
+      ctx.fillStyle = gold
+      ctx.font =
+        language === "ar"
+          ? "normal 28px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
+          : "normal 20px 'Inter', sans-serif"
+      ctx.fillText(bismillahText, maxWidth / 2, currentY)
+      currentY += 40
+    }
+
+    // Ayah Text
+    currentY += 10 + lineHeight / 2
+    ctx.fillStyle = textColor
+    ctx.font =
+      language === "ar"
+        ? "normal 34px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
+        : "normal 26px 'Inter', sans-serif"
+
+    for (const line of lines) {
+      ctx.fillText(line, maxWidth / 2, currentY)
+      currentY += lineHeight
+    }
+
+    // Surah Name
+    currentY += 20
+    ctx.fillStyle = gold
+    ctx.font =
+      language === "ar"
+        ? "normal 26px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
+        : "bold 20px 'Inter', sans-serif"
+    ctx.fillText(surahText, maxWidth / 2, currentY)
+
+    // Info line (Juz · Ayah)
+    currentY += 34
+    ctx.fillStyle = mutedColor
+    ctx.font =
+      language === "ar"
+        ? "normal 18px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
+        : "normal 14px 'Inter', sans-serif"
+    ctx.fillText(infoText, maxWidth / 2, currentY)
+
+    // 5. Footer outside the frame — extension name & version
+    ctx.direction = "ltr"
+    ctx.textAlign = "center"
+    ctx.fillStyle = mutedColor
+    ctx.font = "normal 12px 'Inter', 'Segoe UI', sans-serif"
+    ctx.fillText(
+      `Ayat Extension v${version}`,
+      maxWidth / 2,
+      frameHeight + footerHeight / 2
+    )
+
+    // Download PNG
+    canvas.toBlob((blob) => {
+      if (!blob) return
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `ayat-${ayahData.surahNumber}-${ayahData.ayahNumber}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setCapturedImage(true)
+      setTimeout(() => setCapturedImage(false), 2000)
+    }, "image/png")
+  }
+
+  // Derived display values based on language
+  const displayText =
+    ayahData && language === "ar" ? ayahData.arabicText : ayahData?.translation
+  const displaySurahName =
+    ayahData && language === "ar"
+      ? ayahData.surahArabicName
+      : ayahData?.surahName
+  const isRtl = language === "ar"
+
+  // Auto-minimize timer (pauses on hover)
+  useEffect(() => {
+    if (viewState !== "toast" || !displayText) return
+
+    const hideDelay = displayText.length >= 100 ? displayText.length * 50 : 6000
+    remainingRef.current = hideDelay
+    startTimer()
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [viewState, displayText])
+
+  function startTimer() {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    if (hoveringRef.current) return
+    timerStartRef.current = Date.now()
+    timerRef.current = setTimeout(() => minimize(), remainingRef.current)
+  }
+
+  function pauseTimer() {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+      const elapsed = Date.now() - timerStartRef.current
+      remainingRef.current = Math.max(remainingRef.current - elapsed, 0)
+    }
+  }
+
+  function handleMouseEnter() {
+    hoveringRef.current = true
+    pauseTimer()
+  }
+
+  function handleMouseLeave() {
+    hoveringRef.current = false
+    if (viewState === "toast") {
+      startTimer()
+    }
+  }
+
+  const minimize = useCallback(() => {
+    setDismissing(true)
+    setTimeout(() => {
+      setDismissing(false)
+      setViewState("minimized")
+    }, 280)
+  }, [])
+
+  const dismiss = useCallback(() => {
+    stopAudio()
+    setDismissing(true)
+    setTimeout(() => {
+      setDismissing(false)
+      setViewState("hidden")
+    }, 280)
+  }, [])
+
+  function expand() {
+    setViewState("toast")
+  }
+
+  // Always render the wrapper div so we can find & hide the Plasmo container
+  const isNothing =
+    viewState === "loading" || viewState === "hidden" || !ayahData
+
+  if (isNothing) {
+    return <div ref={wrapperRef} style={{ display: "none" }} />
+  }
+
+  const dark = theme === "dark"
+
+  // Action button style
+  const actionBtn = `flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-0 transition-[background,color] duration-150 ${
+    dark
+      ? "text-white/50 hover:bg-white/10 hover:text-[#F1ECE4]"
+      : "text-[#1F1B16]/50 hover:bg-[#1F1B16]/[0.06] hover:text-[#1F1B16]"
+  }`
+
+  // Minimized: show a small floating circle button
+  if (viewState === "minimized") {
+    return (
+      <div ref={wrapperRef}>
+        <button
+          type="button"
+          onClick={expand}
+          aria-label="Show Ayat"
+          className={`fixed bottom-6 right-6 z-[2147483647] flex h-12 w-12 animate-toast-in cursor-pointer items-center justify-center rounded-full border shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl ${
+            dark
+              ? "border-white/10 bg-[#0F1C2C] text-[#D6A54A] hover:bg-white/5"
+              : "border-[#1F1B16]/10 bg-[#F1ECE4] text-[#D6A54A] hover:bg-[#1F1B16]/5"
+          }`}
+        >
+          {/* <QuranSvg /> */}
+          <img src={logoUrl} alt="icon" />
+        </button>
+      </div>
+    )
+  }
+
+  // Expanded toast
+  return (
+    <div ref={wrapperRef}>
+      <div
+        ref={toastRef}
+        className={`fixed bottom-6 right-6 z-[2147483647] flex max-w-[min(380px,calc(100vw-48px))] flex-col rounded-xl border py-4 pl-4 pr-4 font-sans ${
+          dark
+            ? "border-white/10 bg-[#0F1C2C] shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+            : "border-[#1F1B16]/10 bg-[#F1ECE4] shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
+        } ${dismissing ? "animate-toast-out" : "animate-toast-in"}`}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {/* Top action buttons row */}
+        <div
+          data-actions
+          className="absolute right-2 top-2 flex items-center gap-0.5"
+        >
+          {/* Close */}
+          <button
+            type="button"
+            aria-label="Close"
+            className={actionBtn}
+            onClick={(e) => {
+              e.stopPropagation()
+              dismiss()
+            }}
+          >
+            <CloseSvg />
+          </button>
+        </div>
+
+        {/* Surah info + play button */}
+        <div className="mb-2 flex items-center gap-2 px-1.5 pr-28" dir="ltr">
+          <span
+            className={`inline-flex h-6 min-w-[24px] items-center justify-center rounded-md px-1.5 text-xs font-bold ${
+              dark
+                ? "bg-[#D6A54A]/20 text-[#D6A54A]"
+                : "bg-[#D6A54A]/15 text-[#D6A54A]"
+            }`}
+          >
+            {isRtl ? `جزء ${ayahData.juzNumber}` : `Juz ${ayahData.juzNumber}`}
+          </span>
+          <span
+            className={`text-xs font-semibold ${dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"}`}
+          >
+            {displaySurahName}
+          </span>
+          <span
+            className={`text-[10px] ${dark ? "text-white/50" : "text-[#1F1B16]/60"}`}
+          >
+            {isRtl
+              ? `آية ${ayahData.ayahNumber}`
+              : `Ayah ${ayahData.ayahNumber}`}
+          </span>
+          {/* Play / Pause button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleAudio()
+            }}
+            aria-label={isPlaying ? "Pause" : "Play"}
+            className={` flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none transition-all duration-150 ${
+              isPlaying
+                ? "bg-[#D6A54A] text-[#1F1B16] shadow-sm hover:scale-105"
+                : dark
+                  ? "bg-[#D6A54A]/20 text-[#D6A54A] hover:bg-[#D6A54A]/30"
+                  : "bg-[#D6A54A]/15 text-[#D6A54A] hover:bg-[#D6A54A]/25"
+            }`}
+          >
+            {isPlaying ? <PauseSvg /> : <PlaySvg />}
+          </button>
+        </div>
+
+        {/* Ayah text — selectable, no click-to-collapse */}
+        <div
+          data-body
+          className="min-w-0 select-text px-1.5"
+          dir={isRtl ? "rtl" : "ltr"}
+          style={{ textAlign: isRtl ? "right" : "left" }}
+        >
+          <p
+            className={`m-0 font-normal leading-loose ${
+              dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"
+            } ${isRtl ? "text-[0.9375rem]" : "text-sm"}`}
+          >
+            {displayText}
+          </p>
+        </div>
+        <section className="mt-2 flex items-center justify-between gap-2 px-1.5">
+          {/* Collapse */}
+          <button
+            type="button"
+            aria-label="Collapse"
+            className={`  flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-0 transition-[background,color] duration-150 ${
+              dark
+                ? "text-[#D6A54A] hover:bg-white/10 hover:text-[#D7A542]"
+                : "text-[#D6A54A] hover:bg-[#1F1B16]/[0.06] hover:text-[#D7A542]"
+            }`}
+            onClick={(e) => {
+              e.stopPropagation()
+              minimize()
+            }}
+          >
+            <CollapseSvg />
+          </button>
+          <div className="flex items-center gap-2">
+            {/* Copy text */}
+            <button
+              type="button"
+              aria-label="Copy text"
+              className={actionBtn}
+              onClick={(e) => {
+                e.stopPropagation()
+                copyText()
+              }}
+            >
+              {copied ? <CheckSvg /> : <CopySvg />}
+            </button>
+            {/* Copy as image */}
+            <button
+              type="button"
+              aria-label="Copy as image"
+              className={actionBtn}
+              onClick={(e) => {
+                e.stopPropagation()
+                copyAsImage()
+              }}
+            >
+              {capturedImage ? <CheckSvg /> : <CameraIcon />}
+            </button>
+          </div>
+        </section>
+      </div>
+      <Analytics />
+    </div>
+  )
+}
+
+export default AyatToast
