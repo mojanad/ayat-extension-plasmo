@@ -7,9 +7,10 @@ import {
   Camera,
   Check,
   Copy,
+  Minimize2,
   Pause,
   Play,
-  RotateCcw,
+  Repeat,
   Shuffle,
   SkipBack,
   SkipForward,
@@ -350,9 +351,12 @@ function fmtTime(seconds: number): string {
   return `${minutes}:${remainder.toString().padStart(2, "0")}`
 }
 
-function Kbd({ children }: { children: ReactNode }) {
+function Kbd({ children, title }: { children: ReactNode; title?: string }) {
   return (
-    <span className="inline-flex h-[16px] min-w-[18px] items-center justify-center rounded border border-border bg-card px-1 text-[9.5px] text-foreground/70">
+    <span 
+      title={title}
+      className="inline-flex h-[16px] min-w-[18px] items-center justify-center rounded border border-border bg-card px-1 text-[9.5px] text-foreground/70"
+    >
       {children}
     </span>
   )
@@ -363,12 +367,14 @@ function ToastCtlBtn({
   title,
   active,
   disabled,
-  children
+  children,
+  className,
 }: {
   onClick: () => void
   title: string
   active?: boolean
   disabled?: boolean
+  className?: string
   children: ReactNode
 }) {
   return (
@@ -381,7 +387,7 @@ function ToastCtlBtn({
         active
           ? "bg-accent/15 text-accent"
           : "bg-transparent text-muted-foreground hover:bg-secondary hover:text-foreground"
-      } ${disabled ? "pointer-events-none opacity-40" : ""}`}
+      } ${disabled ? "pointer-events-none opacity-40" : ""} ${className}`}
     >
       {children}
     </button>
@@ -430,12 +436,14 @@ function getToastLabels(language: Language) {
         play: "تشغيل",
         pause: "إيقاف",
         close: "إغلاق",
-        reciter: "القارئ"
+        reciter: "القارئ",
+        repeat: "تكرار",
+        minimize: "تصغير"
       }
     : {
         loading: "Loading...",
         fetching: "Fetching a new ayah",
-        loadError: "Couldn’t load ayah",
+        loadError: "Couldn't load ayah",
         retry: "Retry",
         pleaseTryAgain: "Please try again.",
         showVerse: "Show verse",
@@ -449,7 +457,9 @@ function getToastLabels(language: Language) {
         play: "Play",
         pause: "Pause",
         close: "Dismiss",
-        reciter: "Reciter"
+        reciter: "Reciter",
+        repeat: "Repeat",
+        minimize: "Minimize"
       }
 }
 
@@ -534,6 +544,7 @@ function AyatToast() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [isFontsReady, setIsFontsReady] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
+  const [isLooping, setIsLooping] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const imageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -556,6 +567,50 @@ function AyatToast() {
       if (imageTimerRef.current) clearTimeout(imageTimerRef.current)
     }
   }, [])
+
+  // Sync audio loop state
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.loop = isLooping
+    }
+  }, [isLooping])
+
+  // Keyboard shortcuts implementation using a ref to avoid stale closures
+  const handleKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  handleKeyDownRef.current = (e: KeyboardEvent) => {
+    const target = e.target as HTMLElement
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable
+    ) {
+      return
+    }
+
+    switch (e.key) {
+      case " ":
+        e.preventDefault()
+        toggleAudio()
+        break
+      case "b":
+      case "B":
+        e.preventDefault()
+        toggleFavorite()
+        break
+      case "Escape":
+        e.preventDefault()
+        minimize()
+        break
+    }
+  }
+
+  useEffect(() => {
+    if (viewState !== "toast") return
+
+    const listener = (e: KeyboardEvent) => handleKeyDownRef.current(e)
+    document.addEventListener("keydown", listener)
+    return () => document.removeEventListener("keydown", listener)
+  }, [viewState])
 
   // Load Arabic fonts into the main page (not shadow DOM) for both toast body and canvas
   useEffect(() => {
@@ -928,6 +983,7 @@ function AyatToast() {
     }
 
     const audio = new Audio(audioSrc)
+    audio.loop = isLooping
     audioRef.current = audio
     setAudioProgress(0)
 
@@ -1472,16 +1528,20 @@ function AyatToast() {
 
   // Minimized: show a small floating circle button
   if (viewState === "minimized") {
+    const dark = theme === "dark"
     return (
       <div ref={wrapperRef} className={wrapperClass}>
         <button
           type="button"
           onClick={expand}
           aria-label={labels.showVerse}
-          className={`fixed ${positionClasses} z-[2147483647] flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-foreground shadow-lg transition-transform hover:scale-[1.02]`}
+          className={`fixed ${positionClasses} z-[2147483647] flex h-[48px] w-[48px] animate-fade-up cursor-pointer items-center justify-center rounded-full border shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl ${
+            dark
+              ? "border-white/10 bg-[#0F1C2C] text-[#D6A54A] hover:bg-white/5"
+              : "border-[#1F1B16]/10 bg-[#F1ECE4] text-[#D6A54A] hover:bg-[#fbf1e1]"
+          }`}
         >
-          <RotateCcw size={13} className="text-accent" />
-          <span className="text-sm">{labels.showVerse}</span>
+          <img src={logoUrl} alt="icon" className="h-10 w-10" />
         </button>
       </div>
     )
@@ -1523,7 +1583,9 @@ function AyatToast() {
             style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}
           >
             {displaySurahName} ·{" "}
-            {isRtl ? `آية ${ayahData.ayahNumber}` : `Ayah ${ayahData.ayahNumber}`}
+            {isRtl
+              ? `آية ${ayahData.ayahNumber}`
+              : `Ayah ${ayahData.ayahNumber}`}
           </span>
           <button
             type="button"
@@ -1541,20 +1603,39 @@ function AyatToast() {
         <div className="px-3.5 pb-2.5 pt-1">
           {navigating ? (
             <div className="py-2">
-              <span className={`mb-2 block h-4 w-full ${skeletonShine} ${skeletonTone}`} />
-              <span className={`mb-2 block h-4 w-11/12 ${skeletonShine} ${skeletonTone}`} />
-              <span className={`block h-4 w-2/3 ${skeletonShine} ${skeletonTone}`} />
+              <span
+                className={`mb-2 block h-4 w-full ${skeletonShine} ${skeletonTone}`}
+              />
+              <span
+                className={`mb-2 block h-4 w-11/12 ${skeletonShine} ${skeletonTone}`}
+              />
+              <span
+                className={`block h-4 w-2/3 ${skeletonShine} ${skeletonTone}`}
+              />
             </div>
           ) : isRtl ? (
             <p
-              className="m-0 text-right font-serif"
+              className="m-0 text-right"
               dir="rtl"
-              style={{ fontSize: 17, lineHeight: 1.8, fontWeight: 400 }}
+              style={{
+                fontFamily: ARABIC_FONT,
+                fontSize: 17,
+                lineHeight: 1.8,
+                fontWeight: 400
+              }}
             >
               {displayText}
             </p>
           ) : (
-            <p className="m-0" style={{ fontSize: 14, lineHeight: 1.55, fontWeight: 500 }}>
+            <p
+              className="m-0"
+              style={{
+                fontFamily: ARABIC_FONT,
+                fontSize: 14,
+                lineHeight: 1.55,
+                fontWeight: 500
+              }}
+            >
               {displayText}
             </p>
           )}
@@ -1562,10 +1643,7 @@ function AyatToast() {
 
         <div className="flex items-center justify-between gap-2 border-t border-border bg-secondary/30 px-2.5 py-2">
           <div className="flex items-center gap-0.5">
-            <ToastPlayBtn
-              isPlaying={isPlaying}
-              onClick={() => toggleAudio()}
-            />
+            <ToastPlayBtn isPlaying={isPlaying} onClick={() => toggleAudio()} />
             <ToastCtlBtn
               onClick={goPrevAyah}
               title={labels.previous}
@@ -1586,6 +1664,13 @@ function AyatToast() {
               disabled={navigating}
             >
               <Shuffle size={12} />
+            </ToastCtlBtn>
+            <ToastCtlBtn
+              onClick={() => setIsLooping(!isLooping)}
+              title={labels.repeat}
+              active={isLooping}
+            >
+              <Repeat size={12} />
             </ToastCtlBtn>
           </div>
 
@@ -1646,9 +1731,12 @@ function AyatToast() {
             <span className="truncate">{reciterLabel}</span>
           </span>
           <span className="flex shrink-0 items-center gap-1.5">
-            <Kbd>Space</Kbd>
-            <Kbd>B</Kbd>
-            <Kbd>Esc</Kbd>
+            <Kbd title={`${labels.play} / ${labels.pause}`}>Space</Kbd>
+            <Kbd title={`${labels.save} / ${labels.removeSave}`}>B</Kbd>
+            <Kbd title={labels.minimize}>Esc</Kbd>
+            <ToastCtlBtn className="!size-6"  onClick={minimize} title={labels.minimize}>
+              <Minimize2 size={12} />
+            </ToastCtlBtn>
           </span>
         </div>
 
@@ -1657,8 +1745,7 @@ function AyatToast() {
             role="status"
             className="mx-3 mb-3 mt-2 rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2 text-[12px] leading-4 text-destructive"
           >
-            {labels.loadError}.{" "}
-            <span title={fetchError}>{fetchError}</span>
+            {labels.loadError}. <span title={fetchError}>{fetchError}</span>
           </div>
         )}
       </div>

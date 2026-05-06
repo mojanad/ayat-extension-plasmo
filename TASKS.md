@@ -19,10 +19,10 @@ Use this file as the live implementation checklist. Update it whenever a task is
 - [x] Add every-N-pages mode
 - [x] Add configurable N-pages interval
 - [x] Gate initial toast loading before fetching an ayah
-- [ ] Manually test every-page mode in Chrome
-- [ ] Manually test first-per-session mode in Chrome
-- [ ] Manually test every-N-pages mode in Chrome
-- [ ] Manually test behavior after clearing `chrome.storage.session`
+- [x] Manually test every-page mode in Chrome
+- [x] Manually test first-per-session mode in Chrome
+- [x] Manually test every-N-pages mode in Chrome
+- [x] Manually test behavior after clearing `chrome.storage.session`
 - [ ] Confirm Firefox behavior or note follow-up risk
 - [ ] Decide whether SPA route changes need support in this version
 
@@ -35,9 +35,9 @@ Use this file as the live implementation checklist. Update it whenever a task is
 - [x] Add remove favorite action
 - [x] Add favorites search/filter
 - [x] Update `CHANGELOG.md`
-- [ ] Manually test favorite toggle in Chrome
-- [ ] Manually test popup favorites list in Chrome
-- [ ] Manually test favorites search/filter in Chrome
+- [x] Manually test favorite toggle in Chrome
+- [x] Manually test popup favorites list in Chrome
+- [x] Manually test favorites search/filter in Chrome
 
 ### Keyboard Shortcuts
 

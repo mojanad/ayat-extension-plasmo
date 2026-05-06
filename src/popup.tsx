@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, type ReactNode } from "react"
+import logoUrl from "data-base64:../assets/icon-dark.png"
 import {
   Ban,
   Bookmark,
@@ -32,6 +33,11 @@ import {
   setFavorites as persistFavorites
 } from "./storage"
 import "./style.css"
+
+/** Simple class name merger (no dependency needed) */
+function cn(...args: (string | boolean | undefined | null)[]) {
+  return args.filter(Boolean).join(" ")
+}
 
 type PopupTab = "settings" | "library"
 
@@ -319,14 +325,39 @@ function PopupHeader({
 }) {
   return (
     <div className="border-b border-border bg-background px-5 pb-4 pt-5">
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="m-0 text-[22px] font-bold leading-tight tracking-[-0.02em]">
-            {labels.title}
-          </h1>
-          <p className="m-0 mt-0.5 text-[12.5px] text-muted-foreground">
+      <div className="mb-5 flex items-center gap-3">
+        <img src={logoUrl} alt="Ayat" className="h-10 w-10 rounded-lg" />
+        <div className="min-w-0 flex-1">
+          <div className="mb-0.5 flex items-center gap-2">
+            <h1 className="m-0 text-lg font-semibold leading-none">
+              {labels.title}
+            </h1>
+            <span className="flex items-center justify-center rounded-full border border-accent/30 bg-transparent px-[10px] py-[4px] pb-[3px] text-[10px] font-bold uppercase leading-none tracking-wider text-accent">
+              V{chrome.runtime.getManifest().version} BETA
+            </span>
+          </div>
+          <p className="m-0 text-[12.5px] text-muted-foreground">
             {labels.subtitle}
           </p>
+        </div>
+        {/* Info icon with tooltip */}
+        <div className="group relative">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-5 w-5 cursor-pointer text-accent opacity-60 transition-opacity hover:opacity-100"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4M12 8h.01" />
+          </svg>
+          <div className="pointer-events-none absolute end-0 top-full z-[9999] mt-2 w-[220px] rounded-lg bg-popover px-3 py-2.5 text-center text-[11px] leading-relaxed text-foreground opacity-0 shadow-lg ring-1 ring-border transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
+            صدقة جارية لروح آخي الشهيد أمير مجدي وجدتي وأموات جميع المسلمين،
+            اللهم تقبلها وتقبلنا 🤲
+          </div>
         </div>
         <Switch on={enabled} onChange={onEnabledChange} />
       </div>
@@ -532,7 +563,11 @@ function SettingsPanel({
                 {isCurrentExcluded ? labels.siteBlocked : labels.blockSite}
               </span>
             </div>
-            <Switch on={isCurrentExcluded} onChange={onExcludeCurrentSite} small />
+            <Switch
+              on={isCurrentExcluded}
+              onChange={onExcludeCurrentSite}
+              small
+            />
           </button>
         </Group>
       )}
@@ -750,19 +785,26 @@ function ReciterSelect({
                     setOpen(false)
                   }}
                   className={`flex w-full cursor-pointer items-center gap-2.5 border-none px-3 py-2.5 text-start transition-colors ${
-                    active ? "bg-secondary" : "bg-transparent hover:bg-secondary/60"
+                    active
+                      ? "bg-secondary"
+                      : "bg-transparent hover:bg-secondary/60"
                   }`}
                 >
                   <Avatar reciter={item} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px]" style={{ fontWeight: 600 }}>
+                    <div
+                      className="truncate text-[13px]"
+                      style={{ fontWeight: 600 }}
+                    >
                       {item.name}
                     </div>
                     <div className="truncate font-serif text-[11px] text-muted-foreground">
                       {item.arabicName}
                     </div>
                   </div>
-                  {active && <Check size={13} className="shrink-0 text-accent" />}
+                  {active && (
+                    <Check size={13} className="shrink-0 text-accent" />
+                  )}
                 </button>
               )
             })}
@@ -809,15 +851,47 @@ function PositionPicker({
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="relative aspect-[16/9] overflow-hidden rounded-md border border-border bg-background">
         <div className="absolute left-0 right-0 top-0 flex h-4 items-center gap-1 border-b border-border bg-secondary px-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[#6b6558]/40" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[#6b6558]/40" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[#6b6558]/40" />
         </div>
         <div className="absolute left-3 right-3 top-7 space-y-1.5">
-          <div className="h-1 w-1/3 rounded bg-muted-foreground/20" />
-          <div className="h-1 w-full rounded bg-muted-foreground/15" />
-          <div className="h-1 w-5/6 rounded bg-muted-foreground/15" />
-          <div className="h-1 w-2/3 rounded bg-muted-foreground/15" />
+          <div
+            className={cn(
+              "h-1 w-1/3 rounded bg-[#6b6558]/30",
+              "dark:bg-[#8a93a4]/50"
+            )}
+          />
+          <div
+            className={cn(
+              "h-1 w-full rounded bg-[#6b6558]/30",
+              "dark:bg-[#8a93a4]/50"
+            )}
+          />
+          <div
+            className={cn(
+              "h-1 w-5/6 rounded bg-[#6b6558]/30",
+              "dark:bg-[#8a93a4]/50"
+            )}
+          />
+          <div
+            className={cn(
+              "h-1 w-2/3 rounded bg-[#6b6558]/30",
+              "dark:bg-[#8a93a4]/50"
+            )}
+          />
+          <div
+            className={cn(
+              "h-1 w-2/3 rounded bg-[#6b6558]/30",
+              "dark:bg-[#8a93a4]/50"
+            )}
+          />
+          <div
+            className={cn(
+              "h-1 w-1/2 rounded bg-[#6b6558]/30",
+              "dark:bg-[#8a93a4]/50"
+            )}
+          />
         </div>
 
         {corners.map((corner) => {
@@ -835,7 +909,7 @@ function PositionPicker({
                 className={`relative rounded-sm transition-all ${
                   active
                     ? "h-7 w-12 bg-accent shadow-md"
-                    : "h-5 w-9 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    : "h-5 w-9 bg-[#6b6558]/70 hover:bg-[#6b6558]/70"
                 }`}
               >
                 {active && (
@@ -997,8 +1071,9 @@ function SavedCard({
         </div>
       </div>
       <p
-        className="m-0 text-right font-serif text-[15px] leading-[1.9] text-foreground"
+        className="m-0 text-right text-[15px] leading-[1.9] text-foreground"
         dir="rtl"
+        style={{ fontFamily: "var(--font-serif)" }}
       >
         {favorite.arabicText}
       </p>
