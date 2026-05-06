@@ -4,7 +4,7 @@ Use this file as the live implementation checklist. Update it whenever a task is
 
 ## Current Version
 
-- [ ] Confirm target package version for `v1.4.0`
+- [x] Confirm target package version for `v2.0.0`
 - [x] Update `CHANGELOG.md` for Notification Frequency Control
 
 ## Sprint B - User Control Features
@@ -19,10 +19,10 @@ Use this file as the live implementation checklist. Update it whenever a task is
 - [x] Add every-N-pages mode
 - [x] Add configurable N-pages interval
 - [x] Gate initial toast loading before fetching an ayah
-- [ ] Manually test every-page mode in Chrome
-- [ ] Manually test first-per-session mode in Chrome
-- [ ] Manually test every-N-pages mode in Chrome
-- [ ] Manually test behavior after clearing `chrome.storage.session`
+- [x] Manually test every-page mode in Chrome
+- [x] Manually test first-per-session mode in Chrome
+- [x] Manually test every-N-pages mode in Chrome
+- [x] Manually test behavior after clearing `chrome.storage.session`
 - [ ] Confirm Firefox behavior or note follow-up risk
 - [ ] Decide whether SPA route changes need support in this version
 
@@ -35,19 +35,18 @@ Use this file as the live implementation checklist. Update it whenever a task is
 - [x] Add remove favorite action
 - [x] Add favorites search/filter
 - [x] Update `CHANGELOG.md`
-- [ ] Manually test favorite toggle in Chrome
-- [ ] Manually test popup favorites list in Chrome
-- [ ] Manually test favorites search/filter in Chrome
+- [x] Manually test favorite toggle in Chrome
+- [x] Manually test popup favorites list in Chrome
+- [x] Manually test favorites search/filter in Chrome
 
 ### Keyboard Shortcuts
 
-- [ ] Add extension commands to manifest
-- [ ] Add background command listener
-- [ ] Add content-script message handlers
-- [ ] Add shortcut for show/hide toast
-- [ ] Add shortcut for refresh ayah
-- [ ] Add shortcut for minimize/expand
-- [ ] Update `CHANGELOG.md`
+- [x] Add document keydown listener in content script
+- [x] Add shortcut for play/pause audio (Space)
+- [x] Add shortcut for toggle favorite (B)
+- [x] Add shortcut for minimize toast (Esc)
+- [x] Add tooltips to Kbd components
+- [x] Update `CHANGELOG.md`
 
 ## Sprint C - Sharing + Discovery
 
@@ -72,9 +71,13 @@ Use this file as the live implementation checklist. Update it whenever a task is
 
 ## Cross-Cutting
 
+- [x] Port redesigned toast UI from `Redesign Toast UI`
+- [x] Port redesigned popup Settings / Library UI
+- [x] Add `lucide-react` icon dependency
+- [x] Refresh Tailwind v3 design tokens for redesigned light/dark system
 - [x] Harden toast styles against host-page CSS inheritance
 - [x] Keep `TASKS.md` updated with every feature change
 - [x] Keep `CHANGELOG.md` updated with every shipped user-facing change
 - [ ] Bump package version before release
-- [ ] Run build before release
+- [x] Run build before release
 - [ ] Note any blocked verification steps

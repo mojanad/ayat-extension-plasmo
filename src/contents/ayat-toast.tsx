@@ -1,7 +1,22 @@
 import cssText from "data-text:../style.css"
 import type { PlasmoCSConfig, PlasmoGetStyle } from "plasmo"
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import logoUrl from "data-base64:../../assets/icon-dark.png"
+import {
+  Bookmark,
+  Camera,
+  Check,
+  Copy,
+  Minimize2,
+  Pause,
+  Play,
+  Repeat,
+  Shuffle,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  X
+} from "lucide-react"
 import { allSurahs, quraa } from "../data"
 import {
   type AyatConfig,
@@ -74,7 +89,7 @@ const CloseSvg = () => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-[16px] w-[16px]"
+    className="h-[28px] w-[28px]"
   >
     <path d="M18 6L6 18M6 6l12 12" />
   </svg>
@@ -88,7 +103,7 @@ const CollapseSvg = () => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-[16px] w-[16px]"
+    className="h-[28px] w-[28px]"
   >
     <polyline points="4 14 10 14 10 20" />
     <polyline points="20 10 14 10 14 4" />
@@ -159,13 +174,13 @@ const QuranSvg = () => (
 )
 
 const PlaySvg = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="h-[16px] w-[16px]">
+  <svg viewBox="0 0 24 24" fill="currentColor" className="h-[28px] w-[28px]">
     <path d="M8 5v14l11-7z" />
   </svg>
 )
 
 const PauseSvg = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="h-[16px] w-[16px]">
+  <svg viewBox="0 0 24 24" fill="currentColor" className="h-[28px] w-[28px]">
     <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
   </svg>
 )
@@ -258,7 +273,10 @@ interface FetchJsonOptions {
   timeoutMs: number
 }
 
-async function fetchJson(url: string, options: FetchJsonOptions): Promise<unknown> {
+async function fetchJson(
+  url: string,
+  options: FetchJsonOptions
+): Promise<unknown> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs)
   try {
@@ -321,8 +339,128 @@ function isQuranEncAyaResponse(
   if (!value || typeof value !== "object") return false
   const v = value as any
   return (
-    typeof v.result?.arabic_text === "string" && typeof v.result?.translation === "string"
+    typeof v.result?.arabic_text === "string" &&
+    typeof v.result?.translation === "string"
   )
+}
+
+function fmtTime(seconds: number): string {
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0
+  const minutes = Math.floor(safeSeconds / 60)
+  const remainder = Math.floor(safeSeconds % 60)
+  return `${minutes}:${remainder.toString().padStart(2, "0")}`
+}
+
+function Kbd({ children, title }: { children: ReactNode; title?: string }) {
+  return (
+    <span 
+      title={title}
+      className="inline-flex h-[16px] min-w-[18px] items-center justify-center rounded border border-border bg-card px-1 text-[9.5px] text-foreground/70"
+    >
+      {children}
+    </span>
+  )
+}
+
+function ToastCtlBtn({
+  onClick,
+  title,
+  active,
+  disabled,
+  children,
+  className,
+}: {
+  onClick: () => void
+  title: string
+  active?: boolean
+  disabled?: boolean
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      disabled={disabled}
+      className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-none transition-colors ${
+        active
+          ? "bg-accent/15 text-accent"
+          : "bg-transparent text-muted-foreground hover:bg-secondary hover:text-foreground"
+      } ${disabled ? "pointer-events-none opacity-40" : ""} ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function ToastPlayBtn({
+  isPlaying,
+  onClick
+}: {
+  isPlaying: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mx-0.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-foreground text-background transition-transform hover:scale-105"
+      aria-label={isPlaying ? "Pause" : "Play"}
+    >
+      {isPlaying ? (
+        <Pause size={11} fill="currentColor" />
+      ) : (
+        <Play size={11} fill="currentColor" style={{ marginLeft: 1 }} />
+      )}
+    </button>
+  )
+}
+
+function getToastLabels(language: Language) {
+  return language === "ar"
+    ? {
+        loading: "جارٍ التحميل...",
+        fetching: "جاري جلب آية جديدة",
+        loadError: "تعذر جلب الآية",
+        retry: "إعادة المحاولة",
+        pleaseTryAgain: "حاول مرة أخرى.",
+        showVerse: "إظهار الآية",
+        previous: "السابق",
+        next: "التالي",
+        refresh: "آية جديدة",
+        copy: "نسخ",
+        screenshot: "صورة",
+        save: "حفظ",
+        removeSave: "إزالة من المحفوظات",
+        play: "تشغيل",
+        pause: "إيقاف",
+        close: "إغلاق",
+        reciter: "القارئ",
+        repeat: "تكرار",
+        minimize: "تصغير"
+      }
+    : {
+        loading: "Loading...",
+        fetching: "Fetching a new ayah",
+        loadError: "Couldn't load ayah",
+        retry: "Retry",
+        pleaseTryAgain: "Please try again.",
+        showVerse: "Show verse",
+        previous: "Previous",
+        next: "Next",
+        refresh: "Shuffle",
+        copy: "Copy",
+        screenshot: "Screenshot",
+        save: "Save",
+        removeSave: "Remove favorite",
+        play: "Play",
+        pause: "Pause",
+        close: "Dismiss",
+        reciter: "Reciter",
+        repeat: "Repeat",
+        minimize: "Minimize"
+      }
 }
 
 const FREQUENCY_SHOWN_KEY = "ayatFrequencyShownThisSession"
@@ -393,17 +531,20 @@ function AyatToast() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [reciter, setReciter] = useState("67")
   const [theme, setTheme] = useState<Theme>("light")
-  const [copyFeedback, setCopyFeedback] = useState<"idle" | "success" | "error">(
-    "idle"
-  )
-  const [imageFeedback, setImageFeedback] = useState<"idle" | "success" | "error">(
-    "idle"
-  )
-  const [popupPosition, setPopupPosition] = useState<PopupPosition>("bottom-right")
+  const [audioProgress, setAudioProgress] = useState(0)
+  const [copyFeedback, setCopyFeedback] = useState<
+    "idle" | "success" | "error"
+  >("idle")
+  const [imageFeedback, setImageFeedback] = useState<
+    "idle" | "success" | "error"
+  >("idle")
+  const [popupPosition, setPopupPosition] =
+    useState<PopupPosition>("bottom-right")
   const [navigating, setNavigating] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [isFontsReady, setIsFontsReady] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
+  const [isLooping, setIsLooping] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const imageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -426,6 +567,50 @@ function AyatToast() {
       if (imageTimerRef.current) clearTimeout(imageTimerRef.current)
     }
   }, [])
+
+  // Sync audio loop state
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.loop = isLooping
+    }
+  }, [isLooping])
+
+  // Keyboard shortcuts implementation using a ref to avoid stale closures
+  const handleKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  handleKeyDownRef.current = (e: KeyboardEvent) => {
+    const target = e.target as HTMLElement
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable
+    ) {
+      return
+    }
+
+    switch (e.key) {
+      case " ":
+        e.preventDefault()
+        toggleAudio()
+        break
+      case "b":
+      case "B":
+        e.preventDefault()
+        toggleFavorite()
+        break
+      case "Escape":
+        e.preventDefault()
+        minimize()
+        break
+    }
+  }
+
+  useEffect(() => {
+    if (viewState !== "toast") return
+
+    const listener = (e: KeyboardEvent) => handleKeyDownRef.current(e)
+    document.addEventListener("keydown", listener)
+    return () => document.removeEventListener("keydown", listener)
+  }, [viewState])
 
   // Load Arabic fonts into the main page (not shadow DOM) for both toast body and canvas
   useEffect(() => {
@@ -696,7 +881,9 @@ function AyatToast() {
 
   function goNextAyah() {
     if (!ayahData || navigating) return
-    const currentSurah = allSurahs.find((s) => s.number === ayahData.surahNumber)
+    const currentSurah = allSurahs.find(
+      (s) => s.number === ayahData.surahNumber
+    )
     if (!currentSurah) return
 
     if (ayahData.ayahNumber < currentSurah.ayah_count) {
@@ -704,14 +891,17 @@ function AyatToast() {
       fetchSpecificAyah(currentSurah.number, ayahData.ayahNumber + 1)
     } else {
       // Last ayah — go to first ayah of the next surah (wrap 114 → 1)
-      const nextSurahNumber = currentSurah.number >= 114 ? 1 : currentSurah.number + 1
+      const nextSurahNumber =
+        currentSurah.number >= 114 ? 1 : currentSurah.number + 1
       fetchSpecificAyah(nextSurahNumber, 1)
     }
   }
 
   function goPrevAyah() {
     if (!ayahData || navigating) return
-    const currentSurah = allSurahs.find((s) => s.number === ayahData.surahNumber)
+    const currentSurah = allSurahs.find(
+      (s) => s.number === ayahData.surahNumber
+    )
     if (!currentSurah) return
 
     if (ayahData.ayahNumber > 1) {
@@ -719,7 +909,8 @@ function AyatToast() {
       fetchSpecificAyah(currentSurah.number, ayahData.ayahNumber - 1)
     } else {
       // First ayah — go to last ayah of the previous surah (wrap 1 → 114)
-      const prevSurahNumber = currentSurah.number <= 1 ? 114 : currentSurah.number - 1
+      const prevSurahNumber =
+        currentSurah.number <= 1 ? 114 : currentSurah.number - 1
       const prevSurah = allSurahs.find((s) => s.number === prevSurahNumber)
       if (prevSurah) {
         fetchSpecificAyah(prevSurah.number, prevSurah.ayah_count)
@@ -792,16 +983,32 @@ function AyatToast() {
     }
 
     const audio = new Audio(audioSrc)
+    audio.loop = isLooping
     audioRef.current = audio
+    setAudioProgress(0)
+
+    audio.addEventListener("loadedmetadata", () => {
+      setAudioProgress(0)
+    })
+
+    audio.addEventListener("timeupdate", () => {
+      if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
+        setAudioProgress(0)
+        return
+      }
+      setAudioProgress(Math.min(1, audio.currentTime / audio.duration))
+    })
 
     audio.addEventListener("ended", () => {
       setIsPlaying(false)
+      setAudioProgress(1)
       audioRef.current = null
     })
 
     audio.addEventListener("error", () => {
       console.error("Ayat: audio playback error")
       setIsPlaying(false)
+      setAudioProgress(0)
       audioRef.current = null
     })
 
@@ -821,6 +1028,7 @@ function AyatToast() {
       audioRef.current.src = ""
       audioRef.current = null
     }
+    setAudioProgress(0)
     setIsPlaying(false)
   }
 
@@ -898,7 +1106,8 @@ function AyatToast() {
       }
 
       const isDark = theme === "dark"
-      const text = language === "ar" ? ayahData.arabicText : ayahData.translation
+      const text =
+        language === "ar" ? ayahData.arabicText : ayahData.translation
       const version = chrome.runtime.getManifest().version
 
       const canvas = document.createElement("canvas")
@@ -909,224 +1118,227 @@ function AyatToast() {
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
-    // Colors matching sirahbooks.com theme
-    const bgColor = isDark ? "#0F1C2C" : "#F1ECE4"
-    const gold = "#D6A54A"
-    const textColor = isDark ? "#F1ECE4" : "#0F1C2C"
-    const mutedColor = isDark ? "rgba(241,236,228,0.4)" : "rgba(15,28,44,0.4)"
+      // Colors matching sirahbooks.com theme
+      const bgColor = isDark ? "#0F1C2C" : "#F1ECE4"
+      const gold = "#D6A54A"
+      const textColor = isDark ? "#F1ECE4" : "#0F1C2C"
+      const mutedColor = isDark ? "rgba(241,236,228,0.4)" : "rgba(15,28,44,0.4)"
 
-    // Arabic numbers and markers
-    const toArabicNumber = (n: number) =>
-      n.toString().replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d as any])
+      // Arabic numbers and markers
+      const toArabicNumber = (n: number) =>
+        n.toString().replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d as any])
 
-    const bismillahText =
-      language === "ar"
-        ? "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-        : "In the name of Allah, the Entirely Merciful, the Especially Merciful."
+      const bismillahText =
+        language === "ar"
+          ? "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+          : "In the name of Allah, the Entirely Merciful, the Especially Merciful."
 
-    // Skip Bismillah for Surah At-Tawbah (9) and Al-Fatiha Ayah 1 (already included)
-    const showBismillah = !(
-      ayahData.surahNumber === 9 ||
-      (ayahData.surahNumber === 1 && ayahData.ayahNumber === 1)
-    )
+      // Skip Bismillah for Surah At-Tawbah (9) and Al-Fatiha Ayah 1 (already included)
+      const showBismillah = !(
+        ayahData.surahNumber === 9 ||
+        (ayahData.surahNumber === 1 && ayahData.ayahNumber === 1)
+      )
 
-    const ayahMark =
-      language === "ar"
-        ? ` ﴿${toArabicNumber(ayahData.ayahNumber)}﴾`
-        : ` (${ayahData.ayahNumber})`
-    const mainText = `${text}${ayahMark}`
+      const ayahMark =
+        language === "ar"
+          ? ` ﴿${toArabicNumber(ayahData.ayahNumber)}﴾`
+          : ` (${ayahData.ayahNumber})`
+      const mainText = `${text}${ayahMark}`
 
-    const surahText =
-      language === "ar"
-        ? `سُورَةُ ${ayahData.surahArabicName}`
-        : `Surah ${ayahData.surahName}`
+      const surahText =
+        language === "ar"
+          ? `سُورَةُ ${ayahData.surahArabicName}`
+          : `Surah ${ayahData.surahName}`
 
-    const infoText =
-      language === "ar"
-        ? `الجزء ${toArabicNumber(ayahData.juzNumber)}  ·  آية ${toArabicNumber(ayahData.ayahNumber)}`
-        : `Juz ${ayahData.juzNumber}  ·  Ayah ${ayahData.ayahNumber}`
+      const infoText =
+        language === "ar"
+          ? `الجزء ${toArabicNumber(ayahData.juzNumber)}  ·  آية ${toArabicNumber(ayahData.ayahNumber)}`
+          : `Juz ${ayahData.juzNumber}  ·  Ayah ${ayahData.ayahNumber}`
 
-    // Measure text
-    canvas.width = maxWidth * scale
-    canvas.height = 1000 * scale // temp height
-    ctx.scale(scale, scale)
-    ctx.direction = language === "ar" ? "rtl" : "ltr"
-    ctx.font =
-      language === "ar"
-        ? "normal 34px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
-        : "normal 26px 'Inter', sans-serif"
+      // Measure text
+      canvas.width = maxWidth * scale
+      canvas.height = 1000 * scale // temp height
+      ctx.scale(scale, scale)
+      ctx.direction = language === "ar" ? "rtl" : "ltr"
+      ctx.font =
+        language === "ar"
+          ? "normal 34px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
+          : "normal 26px 'Inter', sans-serif"
 
-    // Word-wrap logic
-    const words = mainText.split(/\s+/)
-    const lines: string[] = []
-    let currentLine = ""
-    const contentWidth = maxWidth - padding * 2.5
+      // Word-wrap logic
+      const words = mainText.split(/\s+/)
+      const lines: string[] = []
+      let currentLine = ""
+      const contentWidth = maxWidth - padding * 2.5
 
-    for (const word of words) {
-      const testLine = currentLine ? `${currentLine} ${word}` : word
-      if (ctx.measureText(testLine).width > contentWidth && currentLine) {
-        lines.push(currentLine)
-        currentLine = word
-      } else {
-        currentLine = testLine
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word
+        if (ctx.measureText(testLine).width > contentWidth && currentLine) {
+          lines.push(currentLine)
+          currentLine = word
+        } else {
+          currentLine = testLine
+        }
       }
-    }
-    if (currentLine) lines.push(currentLine)
+      if (currentLine) lines.push(currentLine)
 
-    // Calculate dynamic heights
-    const bismillahHeight = showBismillah ? 60 : 0
-    const lineHeight = language === "ar" ? 64 : 44
-    const textHeight = lines.length * lineHeight
-    const surahHeight = 40
-    const infoHeight = 30
-    const frameHeight =
-      padding +
-      bismillahHeight +
-      (showBismillah ? 20 : 0) +
-      textHeight +
-      20 +
-      surahHeight +
-      10 +
-      infoHeight +
-      padding
-    const totalHeight = frameHeight + footerHeight
+      // Calculate dynamic heights
+      const bismillahHeight = showBismillah ? 60 : 0
+      const lineHeight = language === "ar" ? 64 : 44
+      const textHeight = lines.length * lineHeight
+      const surahHeight = 40
+      const infoHeight = 30
+      const frameHeight =
+        padding +
+        bismillahHeight +
+        (showBismillah ? 20 : 0) +
+        textHeight +
+        20 +
+        surahHeight +
+        10 +
+        infoHeight +
+        padding
+      const totalHeight = frameHeight + footerHeight
 
-    // Re-init canvas with actual calculated height
-    canvas.width = maxWidth * scale
-    canvas.height = totalHeight * scale
-    ctx.scale(scale, scale)
+      // Re-init canvas with actual calculated height
+      canvas.width = maxWidth * scale
+      canvas.height = totalHeight * scale
+      ctx.scale(scale, scale)
 
-    // 1. Draw Background
-    ctx.fillStyle = bgColor
-    ctx.fillRect(0, 0, maxWidth, totalHeight)
-
-    // 2. Draw Elegant Double Border (only around frameHeight)
-    ctx.strokeStyle = gold
-    // Outer border
-    ctx.lineWidth = 3
-    ctx.strokeRect(16, 16, maxWidth - 32, frameHeight - 32)
-    // Inner border
-    ctx.lineWidth = 1
-    ctx.strokeRect(24, 24, maxWidth - 48, frameHeight - 48)
-
-    // 3. Draw Corner Ornaments
-    const drawCorner = (cx: number, cy: number, rot: number) => {
-      ctx.save()
-      ctx.translate(cx, cy)
-      ctx.rotate(rot)
-
-      // Mask out the inner intersection
+      // 1. Draw Background
       ctx.fillStyle = bgColor
-      ctx.fillRect(-4, -4, 30, 30)
+      ctx.fillRect(0, 0, maxWidth, totalHeight)
 
-      // Ornate outer curve
+      // 2. Draw Elegant Double Border (only around frameHeight)
       ctx.strokeStyle = gold
-      ctx.lineWidth = 1.5
-      ctx.beginPath()
-      ctx.moveTo(26, 0)
-      ctx.quadraticCurveTo(26, 26, 0, 26)
-      ctx.stroke()
+      // Outer border
+      ctx.lineWidth = 3
+      ctx.strokeRect(16, 16, maxWidth - 32, frameHeight - 32)
+      // Inner border
+      ctx.lineWidth = 1
+      ctx.strokeRect(24, 24, maxWidth - 48, frameHeight - 48)
 
-      // Ornate inner curve
-      ctx.beginPath()
-      ctx.moveTo(18, 0)
-      ctx.quadraticCurveTo(18, 18, 0, 18)
-      ctx.stroke()
+      // 3. Draw Corner Ornaments
+      const drawCorner = (cx: number, cy: number, rot: number) => {
+        ctx.save()
+        ctx.translate(cx, cy)
+        ctx.rotate(rot)
 
-      // Center decorative dot
-      ctx.fillStyle = gold
-      ctx.beginPath()
-      ctx.arc(8, 8, 2.5, 0, Math.PI * 2)
-      ctx.fill()
+        // Mask out the inner intersection
+        ctx.fillStyle = bgColor
+        ctx.fillRect(-4, -4, 30, 30)
 
-      ctx.restore()
-    }
+        // Ornate outer curve
+        ctx.strokeStyle = gold
+        ctx.lineWidth = 1.5
+        ctx.beginPath()
+        ctx.moveTo(26, 0)
+        ctx.quadraticCurveTo(26, 26, 0, 26)
+        ctx.stroke()
 
-    drawCorner(24, 24, 0) // top-left
-    drawCorner(maxWidth - 24, 24, Math.PI / 2) // top-right
-    drawCorner(maxWidth - 24, frameHeight - 24, Math.PI) // bottom-right
-    drawCorner(24, frameHeight - 24, -Math.PI / 2) // bottom-left
+        // Ornate inner curve
+        ctx.beginPath()
+        ctx.moveTo(18, 0)
+        ctx.quadraticCurveTo(18, 18, 0, 18)
+        ctx.stroke()
 
-    // 4. Draw Typography
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
-    ctx.direction = language === "ar" ? "rtl" : "ltr"
+        // Center decorative dot
+        ctx.fillStyle = gold
+        ctx.beginPath()
+        ctx.arc(8, 8, 2.5, 0, Math.PI * 2)
+        ctx.fill()
 
-    let currentY = padding + (showBismillah ? 30 : 0)
+        ctx.restore()
+      }
 
-    // Bismillah
-    if (showBismillah) {
+      drawCorner(24, 24, 0) // top-left
+      drawCorner(maxWidth - 24, 24, Math.PI / 2) // top-right
+      drawCorner(maxWidth - 24, frameHeight - 24, Math.PI) // bottom-right
+      drawCorner(24, frameHeight - 24, -Math.PI / 2) // bottom-left
+
+      // 4. Draw Typography
+      ctx.textAlign = "center"
+      ctx.textBaseline = "middle"
+      ctx.direction = language === "ar" ? "rtl" : "ltr"
+
+      let currentY = padding + (showBismillah ? 30 : 0)
+
+      // Bismillah
+      if (showBismillah) {
+        ctx.fillStyle = gold
+        ctx.font =
+          language === "ar"
+            ? "normal 28px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
+            : "normal 20px 'Inter', sans-serif"
+        ctx.fillText(bismillahText, maxWidth / 2, currentY)
+        currentY += 40
+      }
+
+      // Ayah Text
+      currentY += 10 + lineHeight / 2
+      ctx.fillStyle = textColor
+      ctx.font =
+        language === "ar"
+          ? "normal 34px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
+          : "normal 26px 'Inter', sans-serif"
+
+      for (const line of lines) {
+        ctx.fillText(line, maxWidth / 2, currentY)
+        currentY += lineHeight
+      }
+
+      // Surah Name
+      currentY += 20
       ctx.fillStyle = gold
       ctx.font =
         language === "ar"
-          ? "normal 28px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
-          : "normal 20px 'Inter', sans-serif"
-      ctx.fillText(bismillahText, maxWidth / 2, currentY)
-      currentY += 40
-    }
+          ? "normal 26px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
+          : "bold 20px 'Inter', sans-serif"
+      ctx.fillText(surahText, maxWidth / 2, currentY)
 
-    // Ayah Text
-    currentY += 10 + lineHeight / 2
-    ctx.fillStyle = textColor
-    ctx.font =
-      language === "ar"
-        ? "normal 34px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
-        : "normal 26px 'Inter', sans-serif"
+      // Info line (Juz · Ayah)
+      currentY += 34
+      ctx.fillStyle = mutedColor
+      ctx.font =
+        language === "ar"
+          ? "normal 18px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
+          : "normal 14px 'Inter', sans-serif"
+      ctx.fillText(infoText, maxWidth / 2, currentY)
 
-    for (const line of lines) {
-      ctx.fillText(line, maxWidth / 2, currentY)
-      currentY += lineHeight
-    }
+      // 5. Footer outside the frame — extension name & version
+      ctx.direction = "ltr"
+      ctx.textAlign = "center"
+      ctx.fillStyle = mutedColor
+      ctx.font = "normal 12px 'Inter', 'Segoe UI', sans-serif"
+      ctx.fillText(
+        `Ayat Extension v${version}`,
+        maxWidth / 2,
+        frameHeight + footerHeight / 2
+      )
 
-    // Surah Name
-    currentY += 20
-    ctx.fillStyle = gold
-    ctx.font =
-      language === "ar"
-        ? "normal 26px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
-        : "bold 20px 'Inter', sans-serif"
-    ctx.fillText(surahText, maxWidth / 2, currentY)
-
-    // Info line (Juz · Ayah)
-    currentY += 34
-    ctx.fillStyle = mutedColor
-    ctx.font =
-      language === "ar"
-        ? "normal 18px 'UthmanicHafs', 'Amiri Quran', 'Traditional Arabic', serif"
-        : "normal 14px 'Inter', sans-serif"
-    ctx.fillText(infoText, maxWidth / 2, currentY)
-
-    // 5. Footer outside the frame — extension name & version
-    ctx.direction = "ltr"
-    ctx.textAlign = "center"
-    ctx.fillStyle = mutedColor
-    ctx.font = "normal 12px 'Inter', 'Segoe UI', sans-serif"
-    ctx.fillText(
-      `Ayat Extension v${version}`,
-      maxWidth / 2,
-      frameHeight + footerHeight / 2
-    )
-
-    // Download PNG
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        setImageFeedback("error")
+      // Download PNG
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          setImageFeedback("error")
+          if (imageTimerRef.current) clearTimeout(imageTimerRef.current)
+          imageTimerRef.current = setTimeout(
+            () => setImageFeedback("idle"),
+            2000
+          )
+          return
+        }
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `ayat-${ayahData.surahNumber}-${ayahData.ayahNumber}.png`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        setImageFeedback("success")
         if (imageTimerRef.current) clearTimeout(imageTimerRef.current)
         imageTimerRef.current = setTimeout(() => setImageFeedback("idle"), 2000)
-        return
-      }
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `ayat-${ayahData.surahNumber}-${ayahData.ayahNumber}.png`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      setImageFeedback("success")
-      if (imageTimerRef.current) clearTimeout(imageTimerRef.current)
-      imageTimerRef.current = setTimeout(() => setImageFeedback("idle"), 2000)
-    }, "image/png")
+      }, "image/png")
     } catch (err) {
       console.error("Ayat: failed to export image", err)
       setImageFeedback("error")
@@ -1212,59 +1424,52 @@ function AyatToast() {
   }
 
   const dark = theme === "dark"
-  const skeletonTone = dark ? "bg-white/10" : "bg-[#1F1B16]/10"
-  const skeletonShine = "animate-pulse rounded-[6px]"
-
-  // Action button style
-  const actionBtn = `flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[6px] border-none bg-transparent p-0 transition-[background,color] duration-150 ${
-    dark
-      ? "text-white/50 hover:bg-white/10 hover:text-[#F1ECE4]"
-      : "text-[#1F1B16]/50 hover:bg-[#1F1B16]/[0.06] hover:text-[#1F1B16]"
-  }`
+  const labels = getToastLabels(language)
+  const skeletonTone = "bg-muted-foreground/15"
+  const skeletonShine = "animate-pulse rounded-md"
+  const reciterLabel =
+    language === "ar"
+      ? quraa[reciter]?.arabicName || quraa["67"].arabicName
+      : quraa[reciter]?.name || quraa["67"].name
+  const audioDuration = audioRef.current?.duration
+  const hasAudioDuration = Boolean(
+    audioRef.current && Number.isFinite(audioDuration) && audioDuration > 0
+  )
+  const currentTime = hasAudioDuration
+    ? audioRef.current!.currentTime
+    : 0
+  const duration = hasAudioDuration ? audioDuration! : 0
+  const wrapperClass = `ayat-ui ${dark ? "dark" : ""}`
 
   // Position classes based on popupPosition setting
   const positionClasses = (() => {
     switch (popupPosition) {
       case "top-left":
-        return "top-[24px] left-[24px]"
+        return "top-[28px] left-[28px]"
       case "top-right":
-        return "top-[24px] right-[24px]"
+        return "top-[28px] right-[28px]"
       case "bottom-left":
-        return "bottom-[24px] left-[24px]"
+        return "bottom-[28px] left-[28px]"
       case "bottom-right":
       default:
-        return "bottom-[24px] right-[24px]"
+        return "bottom-[28px] right-[28px]"
     }
   })()
 
   if (viewState === "loading") {
     return (
-      <div ref={wrapperRef}>
+      <div ref={wrapperRef} className={wrapperClass}>
         <div
-          style={{ fontFamily: ARABIC_FONT }}
-          className={`fixed ${positionClasses} z-[2147483647] flex w-[min(380px,calc(100vw-48px))] items-center gap-[12px] rounded-[12px] border px-[16px] py-[12px] motion-reduce:animate-none ${
-            dark
-              ? "border-white/10 bg-[#0F1C2C] shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
-              : "border-[#1F1B16]/10 bg-[#F1ECE4] shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
-          } animate-toast-in`}
+          style={{ fontFamily: "var(--font-sans)" }}
+          className={`fixed ${positionClasses} z-[2147483647] flex w-[min(380px,calc(100vw-48px))] items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-foreground shadow-[0_20px_44px_-18px_rgba(0,0,0,0.28),0_4px_12px_-6px_rgba(0,0,0,0.14)] motion-reduce:animate-none animate-fade-up`}
         >
-          <div className="h-[20px] w-[20px] animate-spin rounded-full border-2 border-[#D6A54A] border-t-transparent" />
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
           <div className="min-w-0">
-            <p
-              className={`m-0 text-[14px] font-semibold leading-[20px] ${
-                dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"
-              }`}
-            >
-              {language === "ar" ? "جارٍ التحميل…" : "Loading…"}
+            <p className="m-0 text-[14px] font-semibold leading-5">
+              {labels.loading}
             </p>
-            <p
-              className={`m-0 truncate text-[12px] leading-[16px] ${
-                dark ? "text-white/50" : "text-[#1F1B16]/60"
-              }`}
-            >
-              {language === "ar"
-                ? "جاري جلب آية جديدة"
-                : "Fetching a new ayah"}
+            <p className="m-0 truncate text-[12px] leading-4 text-muted-foreground">
+              {labels.fetching}
             </p>
           </div>
         </div>
@@ -1274,60 +1479,46 @@ function AyatToast() {
 
   if (viewState === "error") {
     return (
-      <div ref={wrapperRef}>
+      <div ref={wrapperRef} className={wrapperClass}>
         <div
-          style={{ fontFamily: ARABIC_FONT }}
-          className={`fixed ${positionClasses} z-[2147483647] flex max-w-[min(380px,calc(100vw-48px))] flex-col rounded-[12px] border px-[16px] py-[16px] motion-reduce:animate-none ${
-            dark
-              ? "border-white/10 bg-[#0F1C2C] shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
-              : "border-[#1F1B16]/10 bg-[#F1ECE4] shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
-          } animate-toast-in`}
+          style={{ fontFamily: "var(--font-sans)" }}
+          className={`fixed ${positionClasses} z-[2147483647] flex w-[min(380px,calc(100vw-48px))] flex-col rounded-xl border border-border bg-card px-4 py-4 text-foreground shadow-[0_20px_44px_-18px_rgba(0,0,0,0.28),0_4px_12px_-6px_rgba(0,0,0,0.14)] motion-reduce:animate-none animate-fade-up`}
         >
-          <div className="mb-[8px] flex items-center justify-between gap-[12px]">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p
-                className={`m-0 text-[14px] font-semibold leading-[20px] ${
-                  dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"
-                }`}
-              >
-                {language === "ar" ? "تعذر جلب الآية" : "Couldn’t load ayah"}
+              <p className="m-0 text-[14px] font-semibold leading-5">
+                {labels.loadError}
               </p>
               <p
-                className={`m-0 truncate text-[12px] leading-[16px] ${
-                  dark ? "text-white/50" : "text-[#1F1B16]/60"
-                }`}
+                className="m-0 truncate text-[12px] leading-4 text-muted-foreground"
                 title={fetchError || undefined}
               >
-                {fetchError || (language === "ar" ? "حاول مرة أخرى." : "Please try again.")}
+                {fetchError || labels.pleaseTryAgain}
               </p>
             </div>
             <button
               type="button"
-              aria-label="Close"
-              className={actionBtn}
+              aria-label={labels.close}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted-foreground transition-colors hover:text-foreground"
               onClick={(e) => {
                 e.stopPropagation()
                 dismiss()
               }}
             >
-              <CloseSvg />
+              <X size={14} />
             </button>
           </div>
 
-          <div className="flex items-center gap-[8px]">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 startInitialLoad()
               }}
-              className={`flex-1 cursor-pointer rounded-[8px] border px-[12px] py-[8px] text-[14px] font-semibold leading-[20px] transition-colors ${
-                dark
-                  ? "border-white/10 bg-white/5 text-[#F1ECE4] hover:bg-white/10"
-                  : "border-[#1F1B16]/10 bg-white text-[#0F1C2C] hover:bg-[#1F1B16]/[0.04]"
-              }`}
+              className="flex-1 cursor-pointer rounded-lg border border-border bg-secondary px-3 py-2 text-[14px] font-semibold leading-5 text-foreground transition-colors hover:bg-muted"
             >
-              {language === "ar" ? "إعادة المحاولة" : "Retry"}
+              {labels.retry}
             </button>
           </div>
         </div>
@@ -1337,20 +1528,20 @@ function AyatToast() {
 
   // Minimized: show a small floating circle button
   if (viewState === "minimized") {
+    const dark = theme === "dark"
     return (
-      <div ref={wrapperRef}>
+      <div ref={wrapperRef} className={wrapperClass}>
         <button
           type="button"
           onClick={expand}
-          aria-label="Show Ayat"
-          className={`fixed ${positionClasses} z-[2147483647] flex h-[48px] w-[48px] animate-toast-in cursor-pointer items-center justify-center rounded-full border shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl ${
+          aria-label={labels.showVerse}
+          className={`fixed ${positionClasses} z-[2147483647] flex h-[48px] w-[48px] animate-fade-up cursor-pointer items-center justify-center rounded-full border shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl ${
             dark
               ? "border-white/10 bg-[#0F1C2C] text-[#D6A54A] hover:bg-white/5"
-              : "border-[#1F1B16]/10 bg-[#F1ECE4] text-[#D6A54A] hover:bg-[#1F1B16]/5"
+              : "border-[#1F1B16]/10 bg-[#F1ECE4] text-[#D6A54A] hover:bg-[#fbf1e1]"
           }`}
         >
-          {/* <QuranSvg /> */}
-          <img src={logoUrl} alt="icon" />
+          <img src={logoUrl} alt="icon" className="h-10 w-10" />
         </button>
       </div>
     )
@@ -1358,232 +1549,203 @@ function AyatToast() {
 
   // Expanded toast
   return (
-    <div ref={wrapperRef}>
+    <div ref={wrapperRef} className={wrapperClass}>
       <div
         ref={toastRef}
-        style={{ fontFamily: ARABIC_FONT }}
-        className={`fixed ${positionClasses} z-[2147483647] flex w-[min(380px,calc(100vw-48px))] flex-col rounded-[12px] border px-[16px] py-[16px] transform-gpu will-change-transform motion-reduce:animate-none ${
-          dark
-            ? "border-white/10 bg-[#0F1C2C] shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
-            : "border-[#1F1B16]/10 bg-[#F1ECE4] shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
-        } ${dismissing ? "animate-toast-out" : "animate-toast-in"}`}
+        style={{
+          fontFamily: "var(--font-sans)",
+          boxShadow:
+            "0 20px 44px -18px rgba(0,0,0,0.28), 0 4px 12px -6px rgba(0,0,0,0.14)"
+        }}
+        className={`fixed ${positionClasses} z-[2147483647] w-[min(380px,calc(100vw-48px))] overflow-hidden rounded-xl border border-border bg-card text-foreground transform-gpu will-change-transform motion-reduce:animate-none ${
+          dismissing ? "animate-toast-out" : "animate-fade-up"
+        }`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        {/* Top action buttons row */}
-        <div
-          data-actions
-          className="absolute right-[8px] top-[8px] flex items-center gap-[2px]"
-        >
-          {/* Close */}
+        {imageFeedback === "success" && (
+          <div className="absolute inset-0 z-20 pointer-events-none animate-flash bg-foreground" />
+        )}
+
+        <div className="h-[2px] bg-secondary">
+          <div
+            className="h-full bg-accent"
+            style={{
+              width: `${audioProgress * 100}%`,
+              transition: isPlaying ? "width 80ms linear" : "width 0.3s ease"
+            }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-2 px-3 pt-2">
+          <span
+            className="shrink-0 truncate text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
+            style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}
+          >
+            {displaySurahName} ·{" "}
+            {isRtl
+              ? `آية ${ayahData.ayahNumber}`
+              : `Ayah ${ayahData.ayahNumber}`}
+          </span>
           <button
             type="button"
-            aria-label="Close"
-            className={actionBtn}
+            aria-label={labels.close}
+            className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border-none bg-transparent text-muted-foreground transition-colors hover:text-foreground"
             onClick={(e) => {
               e.stopPropagation()
               dismiss()
             }}
           >
-            <CloseSvg />
+            <X size={12} />
           </button>
         </div>
 
-        {/* Surah info + play button */}
-        <div className="mb-[8px] flex items-center gap-[8px] px-[6px] pr-[112px]" dir="ltr">
-          <span
-            style={{ fontFamily: ARABIC_FONT }}
-            className={`inline-flex h-[24px] min-w-[24px] items-center justify-center rounded-[6px] px-[6px] text-[12px] font-bold leading-[16px] ${
-              dark
-                ? "bg-[#D6A54A]/20 text-[#D6A54A]"
-                : "bg-[#D6A54A]/15 text-[#D6A54A]"
-            }`}
-          >
-            {isRtl ? `جزء ${ayahData.juzNumber}` : `Juz ${ayahData.juzNumber}`}
-          </span>
-          <span
-            style={{ fontFamily: ARABIC_FONT }}
-            className={`text-[12px] font-semibold leading-[16px] ${dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"}`}
-          >
-            {displaySurahName}
-          </span>
-          <span
-            style={{ fontFamily: ARABIC_FONT }}
-            className={`text-[10px] leading-[14px] ${dark ? "text-white/50" : "text-[#1F1B16]/60"}`}
-          >
-            {isRtl
-              ? `آية ${ayahData.ayahNumber}`
-              : `Ayah ${ayahData.ayahNumber}`}
-          </span>
-          {/* Play / Pause button */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              toggleAudio()
-            }}
-            aria-label={isPlaying ? "Pause" : "Play"}
-            className={` flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-full border-none transition-all duration-150 ${
-              isPlaying
-                ? "bg-[#D6A54A] text-[#1F1B16] shadow-sm hover:scale-105"
-                : dark
-                  ? "bg-[#D6A54A]/20 text-[#D6A54A] hover:bg-[#D6A54A]/30"
-                  : "bg-[#D6A54A]/15 text-[#D6A54A] hover:bg-[#D6A54A]/25"
-            }`}
-          >
-            {isPlaying ? <PauseSvg /> : <PlaySvg />}
-          </button>
+        <div className="px-3.5 pb-2.5 pt-1">
+          {navigating ? (
+            <div className="py-2">
+              <span
+                className={`mb-2 block h-4 w-full ${skeletonShine} ${skeletonTone}`}
+              />
+              <span
+                className={`mb-2 block h-4 w-11/12 ${skeletonShine} ${skeletonTone}`}
+              />
+              <span
+                className={`block h-4 w-2/3 ${skeletonShine} ${skeletonTone}`}
+              />
+            </div>
+          ) : isRtl ? (
+            <p
+              className="m-0 text-right"
+              dir="rtl"
+              style={{
+                fontFamily: ARABIC_FONT,
+                fontSize: 17,
+                lineHeight: 1.8,
+                fontWeight: 400
+              }}
+            >
+              {displayText}
+            </p>
+          ) : (
+            <p
+              className="m-0"
+              style={{
+                fontFamily: ARABIC_FONT,
+                fontSize: 14,
+                lineHeight: 1.55,
+                fontWeight: 500
+              }}
+            >
+              {displayText}
+            </p>
+          )}
         </div>
 
-        {/* Ayah text — selectable, no click-to-collapse */}
+        <div className="flex items-center justify-between gap-2 border-t border-border bg-secondary/30 px-2.5 py-2">
+          <div className="flex items-center gap-0.5">
+            <ToastPlayBtn isPlaying={isPlaying} onClick={() => toggleAudio()} />
+            <ToastCtlBtn
+              onClick={goPrevAyah}
+              title={labels.previous}
+              disabled={navigating}
+            >
+              <SkipBack size={12} />
+            </ToastCtlBtn>
+            <ToastCtlBtn
+              onClick={goNextAyah}
+              title={labels.next}
+              disabled={navigating}
+            >
+              <SkipForward size={12} />
+            </ToastCtlBtn>
+            <ToastCtlBtn
+              onClick={refreshAyah}
+              title={labels.refresh}
+              disabled={navigating}
+            >
+              <Shuffle size={12} />
+            </ToastCtlBtn>
+            <ToastCtlBtn
+              onClick={() => setIsLooping(!isLooping)}
+              title={labels.repeat}
+              active={isLooping}
+            >
+              <Repeat size={12} />
+            </ToastCtlBtn>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span
+              className="text-[9.5px] tabular-nums text-muted-foreground"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              {hasAudioDuration
+                ? `${fmtTime(currentTime)}/${fmtTime(duration)}`
+                : "--:--"}
+            </span>
+            <ToastCtlBtn
+              onClick={copyAsImage}
+              title={labels.screenshot}
+              disabled={navigating}
+              active={imageFeedback === "success"}
+            >
+              {imageFeedback === "success" ? (
+                <Check size={12} className="text-accent" />
+              ) : (
+                <Camera size={12} />
+              )}
+            </ToastCtlBtn>
+            <ToastCtlBtn
+              onClick={copyText}
+              title={labels.copy}
+              disabled={navigating}
+              active={copyFeedback === "success"}
+            >
+              {copyFeedback === "success" ? (
+                <Check size={12} className="text-accent" />
+              ) : (
+                <Copy size={12} />
+              )}
+            </ToastCtlBtn>
+            <ToastCtlBtn
+              onClick={toggleFavorite}
+              title={isFavorite ? labels.removeSave : labels.save}
+              disabled={navigating}
+              active={isFavorite}
+            >
+              <Bookmark
+                size={12}
+                fill={isFavorite ? "var(--accent)" : "none"}
+                className={isFavorite ? "text-accent" : ""}
+              />
+            </ToastCtlBtn>
+          </div>
+        </div>
+
         <div
-          data-body
-          className="min-w-0 select-text px-[6px]"
-          dir={isRtl ? "rtl" : "ltr"}
-          style={{ textAlign: isRtl ? "right" : "left" }}
+          className="flex items-center justify-between gap-2 border-t border-border px-3 py-1.5 text-[9.5px] text-muted-foreground"
+          style={{ fontFamily: "var(--font-mono)" }}
         >
-          <p
-            style={{ fontFamily: ARABIC_FONT }}
-            className={`m-0 font-normal ${
-              dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"
-            } ${isRtl ? "text-[15px] leading-[34px]" : "text-[14px] leading-[24px]"}`}
-          >
-            {navigating ? (
-              <span className="block py-[4px]">
-                <span className={`mb-[8px] block h-[16px] w-full ${skeletonShine} ${skeletonTone}`} />
-                <span className={`mb-[8px] block h-[16px] w-11/12 ${skeletonShine} ${skeletonTone}`} />
-                <span className={`block h-[16px] w-2/3 ${skeletonShine} ${skeletonTone}`} />
-              </span>
-            ) : (
-              displayText
-            )}
-          </p>
+          <span className="flex min-w-0 items-center gap-1 truncate">
+            <Volume2 size={9} className="shrink-0" />
+            <span className="truncate">{reciterLabel}</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            <Kbd title={`${labels.play} / ${labels.pause}`}>Space</Kbd>
+            <Kbd title={`${labels.save} / ${labels.removeSave}`}>B</Kbd>
+            <Kbd title={labels.minimize}>Esc</Kbd>
+            <ToastCtlBtn className="!size-6"  onClick={minimize} title={labels.minimize}>
+              <Minimize2 size={12} />
+            </ToastCtlBtn>
+          </span>
         </div>
-        <section className="mt-[8px] flex items-center justify-between gap-[8px] px-[6px]">
-          {/* Left group: collapse + navigation */}
-          <div className="flex items-center gap-[4px]">
-            {/* Collapse */}
-            <button
-              type="button"
-              aria-label="Collapse"
-              className={`flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[6px] border-none bg-transparent p-0 transition-[background,color] duration-150 ${
-                dark
-                  ? "text-[#D6A54A] hover:bg-white/10 hover:text-[#D7A542]"
-                  : "text-[#D6A54A] hover:bg-[#1F1B16]/[0.06] hover:text-[#D7A542]"
-              }`}
-              onClick={(e) => {
-                e.stopPropagation()
-                minimize()
-              }}
-            >
-              <CollapseSvg />
-            </button>
 
-            {/* Divider */}
-            <div
-              className={`mx-[2px] h-[16px] w-px ${
-                dark ? "bg-white/10" : "bg-[#1F1B16]/10"
-              }`}
-            />
-
-            {/* Refresh Ayah */}
-            <button
-              type="button"
-              aria-label="Refresh Ayah"
-              disabled={navigating}
-              className={`${actionBtn} ${navigating ? "opacity-40 pointer-events-none" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation()
-                refreshAyah()
-              }}
-            >
-              <RefreshSvg />
-            </button>
-
-            {/* Previous Ayah */}
-            <button
-              type="button"
-              aria-label="Previous Ayah"
-              disabled={navigating}
-              className={`${actionBtn} ${navigating ? "opacity-40 pointer-events-none" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation()
-                goPrevAyah()
-              }}
-            >
-              <ChevronLeftSvg />
-            </button>
-            {/* Next Ayah */}
-            <button
-              type="button"
-              aria-label="Next Ayah"
-              disabled={navigating}
-              className={`${actionBtn} ${navigating ? "opacity-40 pointer-events-none" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation()
-                goNextAyah()
-              }}
-            >
-              <ChevronRightSvg />
-            </button>
-          </div>
-
-          {/* Right group: favorite + copy + screenshot */}
-          <div className="flex items-center gap-[8px]">
-            {/* Favorite */}
-            <button
-              type="button"
-              aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
-              disabled={navigating}
-              className={`${actionBtn} ${
-                isFavorite ? "text-[#D6A54A]" : ""
-              } ${navigating ? "opacity-40 pointer-events-none" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation()
-                toggleFavorite()
-              }}
-            >
-              <StarSvg filled={isFavorite} />
-            </button>
-            {/* Copy text */}
-            <button
-              type="button"
-              aria-label="Copy text"
-              disabled={navigating}
-              className={`${actionBtn} ${navigating ? "opacity-40 pointer-events-none" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation()
-                copyText()
-              }}
-            >
-              {copyFeedback === "success" ? <CheckSvg /> : <CopySvg />}
-            </button>
-            {/* Copy as image */}
-            <button
-              type="button"
-              aria-label="Copy as image"
-              disabled={navigating}
-              className={`${actionBtn} ${navigating ? "opacity-40 pointer-events-none" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation()
-                copyAsImage()
-              }}
-            >
-              {imageFeedback === "success" ? <CheckSvg /> : <CameraIcon />}
-            </button>
-          </div>
-        </section>
         {fetchError && !navigating && (
           <div
             role="status"
-            className={`mx-[6px] mt-[12px] rounded-[8px] border px-[12px] py-[8px] text-[12px] leading-[16px] ${
-              dark
-                ? "border-red-300/20 bg-red-300/10 text-red-100"
-                : "border-red-700/15 bg-red-50 text-red-900"
-            }`}
+            className="mx-3 mb-3 mt-2 rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2 text-[12px] leading-4 text-destructive"
           >
-            {language === "ar" ? "تعذر جلب الآية. " : "Couldn’t load ayah. "}
-            <span title={fetchError}>{fetchError}</span>
+            {labels.loadError}. <span title={fetchError}>{fetchError}</span>
           </div>
         )}
       </div>
