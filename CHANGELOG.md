@@ -4,6 +4,57 @@ All notable changes to the **Ayat** extension will be documented in this file.
 
 ---
 
+## [1.3.1] — 2026-05-06
+
+### 🛠 Stability & UX
+
+- **More resilient verse fetching**
+  - Added request timeouts and retry logic when fetching from QuranEnc.
+  - Added a safe fallback error UI with a **Retry** button when the initial fetch fails.
+  - Existing toasts now show fetch/API/offline errors in a bottom alert without hiding the current ayah.
+
+- **Loading state**
+  - Toast now shows a lightweight loading UI while the first ayah is being fetched.
+  - Next, previous, and refresh actions now show an in-toast loading skeleton until the new ayah arrives.
+
+- **Font preloading**
+  - Warmed up Arabic fonts earlier to reduce FOUT and improve first-render consistency.
+
+- **Copy feedback improvements**
+  - Copy actions now handle failures more safely and reset feedback state reliably.
+
+- **Audio proxy hardening**
+  - Background audio fetch now uses a timeout and a safer base64 conversion for large MP3s.
+
+---
+
+## [1.3.0] — 2026-04-28
+
+### ✨ New Features
+
+- **Popup Position Selector**
+  - Added a new setting in the popup to choose the position of the Ayah toast on the page.
+  - Four position options: **Top Left**, **Top Right**, **Bottom Left**, and **Bottom Right** (default).
+  - Position is displayed as a 2×2 visual grid in the popup settings with active state highlighting.
+  - The selected position is persisted in storage and applied in real-time — no page refresh required.
+  - Both the minimized floating button and the expanded toast respect the chosen position.
+  - Full Arabic and English translations for the position labels.
+
+- **Next / Previous Verse Navigation**
+  - Added **◀ Previous** and **▶ Next** navigation buttons to the toast action bar.
+  - Navigate sequentially through verses within the current surah.
+  - Automatic surah wrapping: clicking Next on the last ayah of a surah advances to ayah 1 of the next surah; clicking Previous on ayah 1 goes to the last ayah of the previous surah.
+  - Circular navigation: Surah 114 wraps to Surah 1, and vice versa.
+  - Audio playback stops automatically when navigating to a new verse.
+  - Buttons are disabled during fetch to prevent double-clicks.
+
+- **Forced UthmanicHafs Font**
+  - The UthmanicHafs font is now loaded directly into the shadow DOM via `@font-face`, ensuring it renders correctly regardless of host page or device.
+  - Explicit `font-family` is applied to all Arabic text elements (ayah body, surah name, juz badge, ayah number) — no more fallback to browser defaults.
+  - Fonts are also still loaded via the FontFace API for canvas/screenshot use.
+
+---
+
 ## [1.2.1] — 2026-03-05
 - ** Fix Ui bugs
   - Enhanced the minimze button position 

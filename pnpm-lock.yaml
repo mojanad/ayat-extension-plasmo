@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@vercel/analytics':
-        specifier: ^1.6.1
-        version: 1.6.1(react@18.3.1)(svelte@4.2.2)(vue@3.3.4)
       plasmo:
         specifier: ^0.90.5
         version: 0.90.5(@swc/core@1.15.18(@swc/helpers@0.5.19))(@swc/helpers@0.5.19)(@types/node@22.19.13)(postcss@8.5.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1562,32 +1559,6 @@ packages:
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
-
-  '@vercel/analytics@1.6.1':
-    resolution: {integrity: sha512-oH9He/bEM+6oKlv3chWuOOcp8Y6fo6/PSro8hEkgCW3pu9/OiCXiUpRUogDh3Fs3LH2sosDrx8CxeOLBEE+afg==}
-    peerDependencies:
-      '@remix-run/react': ^2
-      '@sveltejs/kit': ^1 || ^2
-      next: '>= 13'
-      react: ^18 || ^19 || ^19.0.0-rc
-      svelte: '>= 4'
-      vue: ^3
-      vue-router: ^4
-    peerDependenciesMeta:
-      '@remix-run/react':
-        optional: true
-      '@sveltejs/kit':
-        optional: true
-      next:
-        optional: true
-      react:
-        optional: true
-      svelte:
-        optional: true
-      vue:
-        optional: true
-      vue-router:
-        optional: true
 
   '@vue/compiler-core@3.3.4':
     resolution: {integrity: sha512-cquyDNvZ6jTbf/+x+AgM2Arrp6G4Dzbb0R64jiG804HRMfRiFXWI6kqUVqZ6ZR0bQhIoQjB4+2bhNtVwndW15g==}
@@ -4880,12 +4851,6 @@ snapshots:
   '@types/relateurl@0.2.33': {}
 
   '@types/trusted-types@2.0.7': {}
-
-  '@vercel/analytics@1.6.1(react@18.3.1)(svelte@4.2.2)(vue@3.3.4)':
-    optionalDependencies:
-      react: 18.3.1
-      svelte: 4.2.2
-      vue: 3.3.4
 
   '@vue/compiler-core@3.3.4':
     dependencies:

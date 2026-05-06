@@ -1,5 +1,6 @@
 export type Language = "ar" | "en"
 export type Theme = "light" | "dark"
+export type PopupPosition = "bottom-right" | "bottom-left" | "top-right" | "top-left"
 
 export interface AyatConfig {
   enabled: boolean
@@ -7,6 +8,7 @@ export interface AyatConfig {
   language: Language
   reciter: string
   theme: Theme
+  popupPosition: PopupPosition
 }
 
 export const DEFAULT_CONFIG: AyatConfig = {
@@ -14,7 +16,8 @@ export const DEFAULT_CONFIG: AyatConfig = {
   excludedSites: [],
   language: "ar",
   reciter: "67",
-  theme: "light"
+  theme: "light",
+  popupPosition: "bottom-right"
 }
 
 export async function getConfig(): Promise<AyatConfig> {

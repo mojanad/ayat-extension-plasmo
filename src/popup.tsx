@@ -6,6 +6,7 @@ import { quraa } from "./data"
 import {
   type AyatConfig,
   type Language,
+  type PopupPosition,
   type Theme,
   getConfig,
   getHostname,
@@ -25,6 +26,8 @@ const t = {
     reciterDesc: "اختر قارئ القرآن",
     themeTitle: "المظهر",
     themeDesc: "مظهر الإضافة",
+    positionTitle: "موضع الآية",
+    positionDesc: "مكان ظهور الآية في الصفحة",
     excludeBtn: "استبعاد هذا الموقع",
     reEnableBtn: "إعادة تفعيل",
     excludedTitle: "المواقع المستبعدة",
@@ -41,6 +44,8 @@ const t = {
     reciterDesc: "Choose a Quran reciter",
     themeTitle: "Theme",
     themeDesc: "Extension appearance",
+    positionTitle: "Ayah Position",
+    positionDesc: "Where the ayah appears on the page",
     excludeBtn: "Exclude this site",
     reEnableBtn: "Re-enable",
     excludedTitle: "Excluded Sites",
@@ -129,6 +134,12 @@ function Popup() {
     setLocalConfig(updated)
   }
 
+  async function handlePositionChange(pos: PopupPosition) {
+    if (!config) return
+    const updated = await setConfig({ popupPosition: pos })
+    setLocalConfig(updated)
+  }
+
   async function handleExcludeCurrentSite() {
     if (!config || !currentHostname) return
 
@@ -186,6 +197,7 @@ function Popup() {
       className={`w-[320px] font-sans ${bg} ${textPrimary}`}
       dir={isRtl ? "rtl" : "ltr"}
     >
+      helllo
       {/* Header */}
       <div
         className={`flex items-center gap-3 border-b ${borderColor} px-4 py-3`}
@@ -366,6 +378,70 @@ function Popup() {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Position selector */}
+        <div dir="ltr" className={`rounded-lg ${cardBg} px-3 py-2.5`}>
+          <div className="mb-2">
+            <p className={`m-0 text-sm font-medium ${textLabel}`}>
+              {labels.positionTitle}
+            </p>
+            <p className={`m-0 text-xs ${textSecondary}`}>
+              {labels.positionDesc}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {(
+              [
+                { key: "top-left", labelAr: "أعلى يسار", labelEn: "Top Left" },
+                { key: "top-right", labelAr: "أعلى يمين", labelEn: "Top Right" },
+                {
+                  key: "bottom-left",
+                  labelAr: "أسفل يسار",
+                  labelEn: "Bottom Left"
+                },
+                {
+                  key: "bottom-right",
+                  labelAr: "أسفل يمين",
+                  labelEn: "Bottom Right"
+                }
+              ] as { key: PopupPosition; labelAr: string; labelEn: string }[]
+            ).map((pos) => {
+              const isActive = config.popupPosition === pos.key
+              return (
+                <button
+                  key={pos.key}
+                  type="button"
+                  onClick={() => handlePositionChange(pos.key)}
+                  className={`flex cursor-pointer items-center justify-center rounded-lg border px-2 py-2 text-[11px] font-semibold transition-all duration-150 ${
+                    isActive
+                      ? "border-[#D6A54A] bg-[#D6A54A]/15 text-[#D6A54A]"
+                      : dark
+                        ? "border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:bg-white/10"
+                        : "border-[#1F1B16]/10 bg-[#F1ECE4]/50 text-[#1F1B16]/60 hover:border-[#1F1B16]/20 hover:bg-[#F1ECE4]"
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className={`inline-block h-1.5 w-1.5 rounded-full ${
+                        isActive
+                          ? "bg-[#D6A54A]"
+                          : dark
+                            ? "bg-white/30"
+                            : "bg-[#1F1B16]/30"
+                      }`}
+                      style={{
+                        boxShadow: isActive
+                          ? "0 0 6px rgba(214,165,74,0.5)"
+                          : "none"
+                      }}
+                    />
+                    {isRtl ? pos.labelAr : pos.labelEn}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Exclude current site */}
