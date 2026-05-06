@@ -1,6 +1,20 @@
-import React, { useEffect, useState } from "react"
-
-import logoUrl from "data-base64:../assets/icon-dark.png"
+import React, { useEffect, useMemo, useState, type ReactNode } from "react"
+import {
+  Ban,
+  Bookmark,
+  Check,
+  ChevronDown,
+  Copy,
+  Library,
+  Minus,
+  Moon,
+  Plus,
+  Search,
+  Settings2,
+  Sparkles,
+  Sun,
+  Trash2
+} from "lucide-react"
 
 import { quraa } from "./data"
 import {
@@ -14,121 +28,158 @@ import {
   getFavorites,
   getHostname,
   removeFavorite,
-  setConfig
+  setConfig,
+  setFavorites as persistFavorites
 } from "./storage"
 import "./style.css"
 
+type PopupTab = "settings" | "library"
+
+interface ReciterOption {
+  id: string
+  name: string
+  arabicName: string
+  bitrate: string
+  initials: string
+  hue: number
+}
+
 const t = {
   ar: {
-    title: "آيات",
-    subtitle: "تذكير لطيف بالقرآن الكريم",
-    enableTitle: "تفعيل آيات",
-    enableDesc: "عرض آية في كل صفحة",
+    title: "رفيق القرآن",
+    subtitle: "آيات هادئة أثناء التصفح",
+    settings: "الإعدادات",
+    library: "المحفوظات",
+    displayGroup: "العرض",
+    displaySubtitle: "طريقة ظهور الآيات",
     languageTitle: "اللغة",
-    languageDesc: "لغة عرض الآية",
-    reciterTitle: "القارئ",
-    reciterDesc: "اختر قارئ القرآن",
     themeTitle: "المظهر",
-    themeDesc: "مظهر الإضافة",
-    frequencyTitle: "تكرار الإشعارات",
-    frequencyDesc: "اختر عدد مرات ظهور الآية",
+    frequencyGroup: "التكرار",
+    frequencySubtitle: "متى تظهر الآيات",
     everyPage: "كل صفحة",
-    firstPerSession: "أول مرة فقط",
+    firstPerSession: "أول زيارة",
     everyNPages: "كل عدة صفحات",
+    showEvery: "اعرض كل",
     pages: "صفحات",
-    positionTitle: "موضع الآية",
-    positionDesc: "مكان ظهور الآية في الصفحة",
-    excludeBtn: "استبعاد هذا الموقع",
-    reEnableBtn: "إعادة تفعيل",
-    excludedTitle: "المواقع المستبعدة",
-    favoritesTitle: "الآيات المحفوظة",
-    favoritesSearch: "ابحث في المحفوظات",
+    reciterGroup: "القارئ",
+    reciterSubtitle: "صوت التلاوة",
+    reciterSearch: "ابحث عن قارئ...",
+    noReciters: "لا توجد نتائج",
+    positionGroup: "الموضع",
+    positionSubtitle: "مكان ظهور التنبيه",
+    positionLabels: {
+      "top-left": "أعلى يسار",
+      "top-right": "أعلى يمين",
+      "bottom-left": "أسفل يسار",
+      "bottom-right": "أسفل يمين"
+    },
+    siteGroup: "هذا الموقع",
+    blockSite: "استبعاد هذا الموقع",
+    siteBlocked: "الموقع مستبعد",
+    savedCount: "محفوظة",
+    clearAll: "مسح الكل",
+    favoritesSearch: "ابحث في الآيات المحفوظة...",
     noFavorites: "لا توجد آيات محفوظة بعد",
+    noFavoritesHint: "اضغط علامة الحفظ في أي آية لإضافتها هنا.",
     noFavoriteResults: "لا توجد نتائج",
-    remove: "إزالة"
+    copy: "نسخ",
+    delete: "حذف",
+    madeWithIntention: "صنع بنية طيبة"
   },
   en: {
-    title: "Ayat",
-    subtitle: "Gentle Quran reminders",
-    enableTitle: "Enable Ayat",
-    enableDesc: "Show ayah on every page",
+    title: "Quran companion",
+    subtitle: "Mindful verses, while you browse.",
+    settings: "Settings",
+    library: "Library",
+    displayGroup: "Display",
+    displaySubtitle: "How verses appear",
     languageTitle: "Language",
-    languageDesc: "Ayah display language",
-    reciterTitle: "Reciter",
-    reciterDesc: "Choose a Quran reciter",
     themeTitle: "Theme",
-    themeDesc: "Extension appearance",
-    frequencyTitle: "Notification Frequency",
-    frequencyDesc: "Choose how often the ayah appears",
+    frequencyGroup: "Frequency",
+    frequencySubtitle: "When verses appear",
     everyPage: "Every page",
-    firstPerSession: "First per session",
+    firstPerSession: "First visit",
     everyNPages: "Every N pages",
+    showEvery: "Show every",
     pages: "pages",
-    positionTitle: "Ayah Position",
-    positionDesc: "Where the ayah appears on the page",
-    excludeBtn: "Exclude this site",
-    reEnableBtn: "Re-enable",
-    excludedTitle: "Excluded Sites",
-    favoritesTitle: "Saved Ayat",
-    favoritesSearch: "Search saved ayat",
+    reciterGroup: "Reciter",
+    reciterSubtitle: "Voice for audio playback",
+    reciterSearch: "Search reciters...",
+    noReciters: "No reciters found",
+    positionGroup: "Position",
+    positionSubtitle: "Where the toast appears",
+    positionLabels: {
+      "top-left": "Top left",
+      "top-right": "Top right",
+      "bottom-left": "Bottom left",
+      "bottom-right": "Bottom right"
+    },
+    siteGroup: "This site",
+    blockSite: "Block on this site",
+    siteBlocked: "Site blocked",
+    savedCount: "saved",
+    clearAll: "Clear all",
+    favoritesSearch: "Search saved ayat...",
     noFavorites: "No saved ayat yet",
-    noFavoriteResults: "No results",
-    remove: "Remove"
+    noFavoritesHint: "Tap the bookmark icon on any verse to save it here.",
+    noFavoriteResults: "No matches",
+    copy: "Copy",
+    delete: "Delete",
+    madeWithIntention: "Made with intention"
   }
 }
 
-const SunSvg = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="h-3.5 w-3.5"
-  >
-    <circle cx="12" cy="12" r="5" />
-    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-  </svg>
-)
+function getReciterOptions(): ReciterOption[] {
+  return Object.entries(quraa).map(([id, reciter], index) => {
+    const sourceName = reciter.name || reciter.arabicName || id
+    const initials = sourceName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("")
+      .padEnd(2, sourceName[0]?.toUpperCase() || "R")
+      .slice(0, 2)
 
-const MoonSvg = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="h-3.5 w-3.5"
-  >
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-  </svg>
-)
+    return {
+      id,
+      name: reciter.name,
+      arabicName: reciter.arabicName,
+      bitrate: reciter.bitrate,
+      initials,
+      hue: (index * 47 + 32) % 360
+    }
+  })
+}
+
+function buildFavoriteCopyText(favorite: FavoriteAyah, language: Language) {
+  return language === "ar"
+    ? `${favorite.arabicText}\n— سورة ${favorite.surahArabicName}، آية ${favorite.ayahNumber}`
+    : `"${favorite.translation}"\n— Surah ${favorite.surahName}, Ayah ${favorite.ayahNumber}`
+}
 
 function Popup() {
   const [config, setLocalConfig] = useState<AyatConfig | null>(null)
-  const [currentHostname, setCurrentHostname] = useState<string>("")
+  const [currentHostname, setCurrentHostname] = useState("")
   const [isCurrentExcluded, setIsCurrentExcluded] = useState(false)
-  const [excludedOpen, setExcludedOpen] = useState(false)
   const [favorites, setFavorites] = useState<FavoriteAyah[]>([])
-  const [favoritesOpen, setFavoritesOpen] = useState(false)
+  const [tab, setTab] = useState<PopupTab>("settings")
+  const [reciterOpen, setReciterOpen] = useState(false)
   const [favoriteSearch, setFavoriteSearch] = useState("")
+  const [copiedFavoriteId, setCopiedFavoriteId] = useState<string | null>(null)
 
   const lang = config?.language || "ar"
   const isRtl = lang === "ar"
   const labels = t[lang]
   const dark = config?.theme === "dark"
+  const reciters = useMemo(() => getReciterOptions(), [])
 
   useEffect(() => {
     getConfig().then(setLocalConfig)
     getFavorites().then(setFavorites)
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]?.url) {
-        const hostname = getHostname(tabs[0].url)
-        setCurrentHostname(hostname)
-      }
+      if (tabs[0]?.url) setCurrentHostname(getHostname(tabs[0].url))
     })
   }, [])
 
@@ -138,72 +189,19 @@ function Popup() {
     }
   }, [config, currentHostname])
 
-  async function handleToggleEnabled() {
-    if (!config) return
-    const updated = await setConfig({ enabled: !config.enabled })
-    setLocalConfig(updated)
-  }
-
-  async function handleLanguageChange(newLang: Language) {
-    if (!config) return
-    const updated = await setConfig({ language: newLang })
-    setLocalConfig(updated)
-  }
-
-  async function handleThemeChange(newTheme: Theme) {
-    if (!config) return
-    const updated = await setConfig({ theme: newTheme })
-    setLocalConfig(updated)
-  }
-
-  async function handleReciterChange(key: string) {
-    if (!config) return
-    const updated = await setConfig({ reciter: key })
-    setLocalConfig(updated)
-  }
-
-  async function handlePositionChange(pos: PopupPosition) {
-    if (!config) return
-    const updated = await setConfig({ popupPosition: pos })
-    setLocalConfig(updated)
-  }
-
-  async function handleFrequencyChange(frequency: NotificationFrequency) {
-    if (!config) return
-    const updated = await setConfig({ notificationFrequency: frequency })
-    setLocalConfig(updated)
-  }
-
-  async function handleFrequencyIntervalChange(value: number) {
-    if (!config) return
-    const updated = await setConfig({
-      notificationEveryNPages: Math.min(Math.max(value, 2), 25)
-    })
+  async function updateConfig(configPatch: Partial<AyatConfig>) {
+    const updated = await setConfig(configPatch)
     setLocalConfig(updated)
   }
 
   async function handleExcludeCurrentSite() {
     if (!config || !currentHostname) return
 
-    if (isCurrentExcluded) {
-      const updated = await setConfig({
-        excludedSites: config.excludedSites.filter((s) => s !== currentHostname)
-      })
-      setLocalConfig(updated)
-    } else {
-      const updated = await setConfig({
-        excludedSites: [...config.excludedSites, currentHostname]
-      })
-      setLocalConfig(updated)
-    }
-  }
-
-  async function handleRemoveExcluded(site: string) {
-    if (!config) return
-    const updated = await setConfig({
-      excludedSites: config.excludedSites.filter((s) => s !== site)
+    await updateConfig({
+      excludedSites: isCurrentExcluded
+        ? config.excludedSites.filter((site) => site !== currentHostname)
+        : [...config.excludedSites, currentHostname]
     })
-    setLocalConfig(updated)
   }
 
   async function handleRemoveFavorite(id: string) {
@@ -211,36 +209,23 @@ function Popup() {
     setFavorites(updated)
   }
 
-  if (!config) {
-    return (
-      <div
-        className={`flex w-[320px] items-center justify-center p-6 font-sans ${dark ? "bg-gray-900" : "bg-white"}`}
-      >
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#D6A54A] border-t-transparent" />
-      </div>
-    )
+  async function handleClearFavorites() {
+    await persistFavorites([])
+    setFavorites([])
   }
 
-  // Theme-dependent color classes
-  // Theme-dependent color classes
-  const bg = dark ? "bg-[#0F1C2C]" : "bg-[#F1ECE4]"
-  const textPrimary = dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"
-  const textSecondary = dark ? "text-white/60" : "text-[#1F1B16]/60"
-  const textLabel = dark ? "text-[#F1ECE4]" : "text-[#1F1B16]"
-  const cardBg = dark ? "bg-white/5" : "bg-white"
-  const borderColor = dark ? "border-white/10" : "border-[#1F1B16]/10"
-  const siteBg = cardBg
-  const siteText = textSecondary
-  const selectBg = dark
-    ? "bg-white/5 border-white/10 text-[#F1ECE4]"
-    : "bg-white border-[#1F1B16]/20 text-[#0F1C2C]"
-  const segBtnInactive = dark
-    ? "bg-white/5 text-white/70 hover:bg-white/10"
-    : "bg-[#F1ECE4]/50 text-slate-600 hover:bg-[#F1ECE4]"
-  const segBorder = dark ? "border-white/10" : "border-[#1F1B16]/20"
-  const normalizedFavoriteSearch = favoriteSearch.trim().toLowerCase()
+  function copyFavorite(favorite: FavoriteAyah) {
+    navigator.clipboard
+      .writeText(buildFavoriteCopyText(favorite, lang))
+      .catch((err) => console.error("Ayat: failed to copy favorite", err))
+    setCopiedFavoriteId(favorite.id)
+    setTimeout(() => setCopiedFavoriteId(null), 1800)
+  }
+
   const filteredFavorites = favorites.filter((favorite) => {
-    if (!normalizedFavoriteSearch) return true
+    const query = favoriteSearch.trim().toLowerCase()
+    if (!query) return true
+
     return [
       favorite.surahName,
       favorite.surahArabicName,
@@ -250,524 +235,851 @@ function Popup() {
     ]
       .join(" ")
       .toLowerCase()
-      .includes(normalizedFavoriteSearch)
+      .includes(query)
   })
+
+  if (!config) {
+    return (
+      <div className="ayat-ui flex w-[400px] items-center justify-center bg-background p-6 text-foreground">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      </div>
+    )
+  }
 
   return (
     <div
-      className={`w-[320px] font-sans ${bg} ${textPrimary}`}
+      className={`ayat-ui ${dark ? "dark" : ""} w-[400px] bg-background text-foreground`}
       dir={isRtl ? "rtl" : "ltr"}
+      style={{ fontFamily: "var(--font-sans)" }}
     >
-      helllo
-      {/* Header */}
-      <div
-        className={`flex items-center gap-3 border-b ${borderColor} px-4 py-3`}
-      >
-        <img src={logoUrl} alt="Ayat" className="h-10 w-10 rounded-lg" />
-        <div className="flex-1">
-          <div className="mb-0.5 flex items-center gap-2">
-            <h1 className="m-0 text-lg font-semibold leading-none">
-              {labels.title}
-            </h1>
-            <span className="flex items-center justify-center rounded-full border border-[#D7A542]/30 px-[10px] py-[4px] text-[10px] font-bold uppercase leading-none tracking-wider text-[#D7A542] bg-transparent pb-[3px]">
-              V{chrome.runtime.getManifest().version} BETA
-            </span>
-          </div>
-          <p className={`m-0 text-xs ${textSecondary}`}>{labels.subtitle}</p>
+      <PopupHeader
+        labels={labels}
+        enabled={config.enabled}
+        onEnabledChange={(enabled) => updateConfig({ enabled })}
+        tab={tab}
+        setTab={setTab}
+        savedCount={favorites.length}
+      />
+
+      {tab === "settings" ? (
+        <SettingsPanel
+          labels={labels}
+          config={config}
+          currentHostname={currentHostname}
+          isCurrentExcluded={isCurrentExcluded}
+          reciters={reciters}
+          reciterOpen={reciterOpen}
+          setReciterOpen={setReciterOpen}
+          onLanguageChange={(language) => updateConfig({ language })}
+          onThemeChange={(theme) => updateConfig({ theme })}
+          onFrequencyChange={(notificationFrequency) =>
+            updateConfig({ notificationFrequency })
+          }
+          onIntervalChange={(notificationEveryNPages) =>
+            updateConfig({ notificationEveryNPages })
+          }
+          onReciterChange={(reciter) => updateConfig({ reciter })}
+          onPositionChange={(popupPosition) => updateConfig({ popupPosition })}
+          onExcludeCurrentSite={handleExcludeCurrentSite}
+        />
+      ) : (
+        <LibraryPanel
+          labels={labels}
+          language={lang}
+          favorites={filteredFavorites}
+          allFavorites={favorites}
+          search={favoriteSearch}
+          setSearch={setFavoriteSearch}
+          copiedId={copiedFavoriteId}
+          onCopy={copyFavorite}
+          onDelete={handleRemoveFavorite}
+          onClear={handleClearFavorites}
+        />
+      )}
+
+      <Footer labels={labels} />
+    </div>
+  )
+}
+
+function PopupHeader({
+  labels,
+  enabled,
+  onEnabledChange,
+  tab,
+  setTab,
+  savedCount
+}: {
+  labels: (typeof t)["en"]
+  enabled: boolean
+  onEnabledChange: (value: boolean) => void
+  tab: PopupTab
+  setTab: (tab: PopupTab) => void
+  savedCount: number
+}) {
+  return (
+    <div className="border-b border-border bg-background px-5 pb-4 pt-5">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="m-0 text-[22px] font-bold leading-tight tracking-[-0.02em]">
+            {labels.title}
+          </h1>
+          <p className="m-0 mt-0.5 text-[12.5px] text-muted-foreground">
+            {labels.subtitle}
+          </p>
         </div>
-        {/* Info icon */}
-        <div className="group relative">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#D6A54A"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-5 w-5 cursor-pointer opacity-60 transition-opacity hover:opacity-100"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 16v-4M12 8h.01" />
-          </svg>
-          <div
-            className={`pointer-events-none absolute top-full end-0 mt-2 w-[220px] rounded-lg px-3 py-2.5 text-center text-[11px] leading-relaxed opacity-0 shadow-lg transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100 z-[9999] ${
-              dark
-                ? "bg-gray-700 text-gray-100"
-                : "bg-white text-gray-700 ring-1 ring-black/5"
-            }`}
-            // dir="rtl"
-          >
-            صدقة جارية لروح آخي الشهيد أمير مجدي وجدتي وأموات جميع المسلمين،
-            اللهم تقبلها وتقبلنا 🤲
-          </div>
-        </div>
+        <Switch on={enabled} onChange={onEnabledChange} />
       </div>
 
-      {/* Settings */}
-      <div className="space-y-3 p-4">
-        {/* Enable / Disable toggle */}
-        <div
-          className={`flex items-center justify-between rounded-lg ${cardBg} px-3 py-2.5`}
+      <div className="flex rounded-lg bg-secondary p-1 text-[13px]">
+        <TabBtn
+          active={tab === "settings"}
+          onClick={() => setTab("settings")}
+          icon={<Settings2 size={13} />}
         >
-          <div>
-            <p className={`m-0 text-sm font-medium ${textLabel}`}>
-              {labels.enableTitle}
-            </p>
-            <p className={`m-0 text-xs ${textSecondary}`}>
-              {labels.enableDesc}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleToggleEnabled}
-            aria-label={config.enabled ? "Disable" : "Enable"}
-            className={`relative h-6 w-11 cursor-pointer rounded-full border-none transition-colors duration-200 ${
-              config.enabled
-                ? "bg-[#D6A54A]"
-                : dark
-                  ? "bg-white/20"
-                  : "bg-gray-300"
+          {labels.settings}
+        </TabBtn>
+        <TabBtn
+          active={tab === "library"}
+          onClick={() => setTab("library")}
+          icon={<Library size={13} />}
+        >
+          {labels.library}
+          <span
+            className={`ms-1.5 rounded-md px-1.5 py-0.5 text-[10px] tabular-nums ${
+              tab === "library"
+                ? "bg-secondary text-foreground"
+                : "bg-card text-muted-foreground"
             }`}
+            style={{ fontFamily: "var(--font-mono)" }}
           >
-            <span
-              className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
-                config.enabled ? "translate-x-5" : "translate-x-0"
-              }`}
+            {savedCount}
+          </span>
+        </TabBtn>
+      </div>
+    </div>
+  )
+}
+
+function TabBtn({
+  active,
+  onClick,
+  icon,
+  children
+}: {
+  active: boolean
+  onClick: () => void
+  icon: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border-none px-3 py-2 transition-all ${
+        active
+          ? "bg-card text-foreground shadow-sm"
+          : "bg-transparent text-muted-foreground hover:text-foreground"
+      }`}
+      style={{ fontWeight: active ? 600 : 500 }}
+    >
+      {icon}
+      {children}
+    </button>
+  )
+}
+
+function SettingsPanel({
+  labels,
+  config,
+  currentHostname,
+  isCurrentExcluded,
+  reciters,
+  reciterOpen,
+  setReciterOpen,
+  onLanguageChange,
+  onThemeChange,
+  onFrequencyChange,
+  onIntervalChange,
+  onReciterChange,
+  onPositionChange,
+  onExcludeCurrentSite
+}: {
+  labels: (typeof t)["en"]
+  config: AyatConfig
+  currentHostname: string
+  isCurrentExcluded: boolean
+  reciters: ReciterOption[]
+  reciterOpen: boolean
+  setReciterOpen: (value: boolean) => void
+  onLanguageChange: (value: Language) => void
+  onThemeChange: (value: Theme) => void
+  onFrequencyChange: (value: NotificationFrequency) => void
+  onIntervalChange: (value: number) => void
+  onReciterChange: (value: string) => void
+  onPositionChange: (value: PopupPosition) => void
+  onExcludeCurrentSite: () => void
+}) {
+  const currentReciter =
+    reciters.find((reciter) => reciter.id === config.reciter) || reciters[0]
+
+  return (
+    <div className="animate-fade-up space-y-6 px-5 py-5">
+      <Group label={labels.displayGroup} subtitle={labels.displaySubtitle}>
+        <div className="grid grid-cols-2 gap-2">
+          <SegmentField label={labels.languageTitle}>
+            <Segmented
+              options={[
+                { id: "ar", label: "AR" },
+                { id: "en", label: "EN" }
+              ]}
+              value={config.language}
+              onChange={(value) => onLanguageChange(value as Language)}
             />
-          </button>
+          </SegmentField>
+          <SegmentField label={labels.themeTitle}>
+            <Segmented
+              options={[
+                { id: "light", label: <Sun size={12} /> },
+                { id: "dark", label: <Moon size={12} /> }
+              ]}
+              value={config.theme}
+              onChange={(value) => onThemeChange(value as Theme)}
+            />
+          </SegmentField>
         </div>
+      </Group>
 
-        {/* Language selector */}
-        <div
-          className={`flex items-center justify-between rounded-lg ${cardBg} px-3 py-2.5`}
-        >
-          <div>
-            <p className={`m-0 text-sm font-medium ${textLabel}`}>
-              {labels.languageTitle}
-            </p>
-            <p className={`m-0 text-xs ${textSecondary}`}>
-              {labels.languageDesc}
-            </p>
+      <Group label={labels.frequencyGroup} subtitle={labels.frequencySubtitle}>
+        <div className="space-y-2">
+          <div className="flex rounded-lg bg-secondary p-1 text-[13px]">
+            {[
+              { id: "everyPage", label: labels.everyPage },
+              { id: "everyNPages", label: labels.everyNPages },
+              { id: "firstPerSession", label: labels.firstPerSession }
+            ].map((option) => {
+              const active = config.notificationFrequency === option.id
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() =>
+                    onFrequencyChange(option.id as NotificationFrequency)
+                  }
+                  className={`flex-1 cursor-pointer rounded-md border-none px-2 py-1.5 transition-all ${
+                    active
+                      ? "bg-card text-foreground shadow-sm"
+                      : "bg-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                  style={{ fontWeight: active ? 600 : 500 }}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
           </div>
-          <div
-            className={`flex overflow-hidden rounded-lg border ${segBorder}`}
-            dir="ltr"
-          >
-            <button
-              type="button"
-              onClick={() => handleLanguageChange("ar")}
-              className={`cursor-pointer border-none px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${
-                config.language === "ar"
-                  ? "bg-[#D6A54A] text-[#1F1B16]"
-                  : segBtnInactive
-              }`}
-            >
-              عربي
-            </button>
-            <button
-              type="button"
-              onClick={() => handleLanguageChange("en")}
-              className={`cursor-pointer border-none px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${
-                config.language === "en"
-                  ? "bg-[#D6A54A] text-[#1F1B16]"
-                  : segBtnInactive
-              }`}
-            >
-              EN
-            </button>
-          </div>
-        </div>
 
-        {/* Theme selector */}
-        <div
-          className={`flex items-center justify-between rounded-lg ${cardBg} px-3 py-2.5`}
-        >
-          <div>
-            <p className={`m-0 text-sm font-medium ${textLabel}`}>
-              {labels.themeTitle}
-            </p>
-            <p className={`m-0 text-xs ${textSecondary}`}>{labels.themeDesc}</p>
-          </div>
-          <div
-            className={`flex overflow-hidden rounded-lg border ${segBorder}`}
-            dir="ltr"
-          >
-            <button
-              type="button"
-              onClick={() => handleThemeChange("light")}
-              className={`flex cursor-pointer items-center gap-1 border-none px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${
-                config.theme === "light"
-                  ? "bg-[#D6A54A] text-[#1F1B16]"
-                  : segBtnInactive
-              }`}
-            >
-              <SunSvg />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleThemeChange("dark")}
-              className={`flex cursor-pointer items-center gap-1 border-none px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${
-                config.theme === "dark"
-                  ? "bg-[#D6A54A] text-[#1F1B16]"
-                  : segBtnInactive
-              }`}
-            >
-              <MoonSvg />
-            </button>
-          </div>
-        </div>
-
-        {/* Notification frequency selector */}
-        <div className={`rounded-lg ${cardBg} px-3 py-2.5`}>
-          <div className="mb-2">
-            <p className={`m-0 text-sm font-medium ${textLabel}`}>
-              {labels.frequencyTitle}
-            </p>
-            <p className={`m-0 text-xs ${textSecondary}`}>
-              {labels.frequencyDesc}
-            </p>
-          </div>
-          <div className={`grid overflow-hidden rounded-lg border ${segBorder}`}>
-            {(
-              [
-                { key: "everyPage", label: labels.everyPage },
-                { key: "firstPerSession", label: labels.firstPerSession },
-                { key: "everyNPages", label: labels.everyNPages }
-              ] as { key: NotificationFrequency; label: string }[]
-            ).map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => handleFrequencyChange(item.key)}
-                className={`cursor-pointer border-none px-3 py-2 text-xs font-semibold transition-colors duration-150 ${
-                  config.notificationFrequency === item.key
-                    ? "bg-[#D6A54A] text-[#1F1B16]"
-                    : segBtnInactive
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
           {config.notificationFrequency === "everyNPages" && (
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                type="number"
-                min={2}
-                max={25}
+            <div className="animate-fade-up flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
+              <span className="text-[13px] text-muted-foreground">
+                {labels.showEvery}
+              </span>
+              <Stepper
                 value={config.notificationEveryNPages}
-                onChange={(e) =>
-                  handleFrequencyIntervalChange(Number(e.target.value) || 2)
-                }
-                className={`w-16 rounded-md border px-2 py-1.5 text-xs outline-none transition-colors focus:border-[#D6A54A] focus:ring-1 focus:ring-[#D6A54A] ${selectBg}`}
+                setValue={onIntervalChange}
+                min={2}
+                max={50}
+                unit={labels.pages}
               />
-              <span className={`text-xs ${textSecondary}`}>{labels.pages}</span>
             </div>
           )}
         </div>
+      </Group>
 
-        {/* Reciter selector */}
-        <div className={`rounded-lg ${cardBg} px-3 py-2.5`}>
-          <div className="mb-2">
-            <p className={`m-0 text-sm font-medium ${textLabel}`}>
-              {labels.reciterTitle}
-            </p>
-            <p className={`m-0 text-xs ${textSecondary}`}>
-              {labels.reciterDesc}
-            </p>
-          </div>
-          <select
-            value={config.reciter}
-            onChange={(e) => handleReciterChange(e.target.value)}
-            dir={isRtl ? "rtl" : "ltr"}
-            className={`w-full cursor-pointer appearance-none rounded-md border px-3 py-2 text-xs outline-none transition-colors focus:border-[#D6A54A] focus:ring-1 focus:ring-[#D6A54A] ${selectBg}`}
+      <Group label={labels.reciterGroup} subtitle={labels.reciterSubtitle}>
+        <ReciterSelect
+          labels={labels}
+          reciters={reciters}
+          reciter={currentReciter}
+          setReciter={(reciter) => onReciterChange(reciter.id)}
+          open={reciterOpen}
+          setOpen={setReciterOpen}
+        />
+      </Group>
+
+      <Group label={labels.positionGroup} subtitle={labels.positionSubtitle}>
+        <PositionPicker
+          labels={labels}
+          value={config.popupPosition}
+          onChange={onPositionChange}
+        />
+      </Group>
+
+      {currentHostname && (
+        <Group label={labels.siteGroup} subtitle={currentHostname}>
+          <button
+            type="button"
+            onClick={onExcludeCurrentSite}
+            className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-[13px] transition-colors ${
+              isCurrentExcluded
+                ? "border-destructive/30 bg-destructive/10 text-destructive"
+                : "border-border bg-card hover:border-foreground/20"
+            }`}
           >
-            {Object.entries(quraa).map(([key, q]) => (
-              <option key={key} value={key}>
-                {isRtl ? q.arabicName : q.name} ({q.bitrate})
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="flex items-center gap-2.5">
+              <Ban size={13} />
+              <span style={{ fontWeight: 500 }}>
+                {isCurrentExcluded ? labels.siteBlocked : labels.blockSite}
+              </span>
+            </div>
+            <Switch on={isCurrentExcluded} onChange={onExcludeCurrentSite} small />
+          </button>
+        </Group>
+      )}
+    </div>
+  )
+}
 
-        {/* Position selector */}
-        <div dir="ltr" className={`rounded-lg ${cardBg} px-3 py-2.5`}>
-          <div className="mb-2">
-            <p className={`m-0 text-sm font-medium ${textLabel}`}>
-              {labels.positionTitle}
-            </p>
-            <p className={`m-0 text-xs ${textSecondary}`}>
-              {labels.positionDesc}
-            </p>
+function Group({
+  label,
+  subtitle,
+  children
+}: {
+  label: string
+  subtitle?: string
+  children: ReactNode
+}) {
+  return (
+    <section>
+      <div className="mb-2.5 flex items-baseline justify-between gap-3">
+        <span
+          className="text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground"
+          style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}
+        >
+          {label}
+        </span>
+        {subtitle && (
+          <span className="truncate text-[11.5px] text-muted-foreground">
+            {subtitle}
+          </span>
+        )}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function SegmentField({
+  label,
+  children
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2">
+      <span className="text-[12.5px] text-muted-foreground">{label}</span>
+      {children}
+    </div>
+  )
+}
+
+function Segmented({
+  options,
+  value,
+  onChange
+}: {
+  options: { id: string; label: ReactNode }[]
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="flex rounded-md bg-secondary p-0.5">
+      {options.map((option) => {
+        const active = option.id === value
+        return (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => onChange(option.id)}
+            className={`flex h-6 min-w-[28px] cursor-pointer items-center justify-center rounded border-none px-2 text-[11.5px] transition-all ${
+              active
+                ? "bg-card text-foreground shadow-sm"
+                : "bg-transparent text-muted-foreground"
+            }`}
+            style={{ fontWeight: 600 }}
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function Stepper({
+  value,
+  setValue,
+  min,
+  max,
+  unit
+}: {
+  value: number
+  setValue: (value: number) => void
+  min: number
+  max: number
+  unit: string
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-md bg-secondary p-0.5">
+      <button
+        type="button"
+        onClick={() => setValue(Math.max(min, value - 1))}
+        className="flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+        aria-label="decrease"
+      >
+        <Minus size={11} />
+      </button>
+      <span
+        className="min-w-[56px] text-center text-[13px] tabular-nums"
+        style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}
+      >
+        {value}{" "}
+        <span className="text-muted-foreground" style={{ fontWeight: 400 }}>
+          {unit}
+        </span>
+      </span>
+      <button
+        type="button"
+        onClick={() => setValue(Math.min(max, value + 1))}
+        className="flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+        aria-label="increase"
+      >
+        <Plus size={11} />
+      </button>
+    </div>
+  )
+}
+
+function ReciterSelect({
+  labels,
+  reciters,
+  reciter,
+  setReciter,
+  open,
+  setOpen
+}: {
+  labels: (typeof t)["en"]
+  reciters: ReciterOption[]
+  reciter: ReciterOption
+  setReciter: (reciter: ReciterOption) => void
+  open: boolean
+  setOpen: (value: boolean) => void
+}) {
+  const [query, setQuery] = useState("")
+
+  useEffect(() => {
+    if (!open) setQuery("")
+  }, [open])
+
+  const normalizedQuery = query.trim().toLowerCase()
+  const filtered = reciters.filter(
+    (item) =>
+      !normalizedQuery ||
+      item.name.toLowerCase().includes(normalizedQuery) ||
+      item.arabicName.includes(query) ||
+      item.initials.toLowerCase().includes(normalizedQuery)
+  )
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors ${
+          open ? "border-accent" : "border-border hover:border-foreground/20"
+        }`}
+      >
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Avatar reciter={reciter} />
+          <div className="min-w-0 text-start">
+            <div className="truncate text-[13px]" style={{ fontWeight: 600 }}>
+              {reciter.name}
+            </div>
+            <div className="truncate font-serif text-[11px] text-muted-foreground">
+              {reciter.arabicName}
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {(
-              [
-                { key: "top-left", labelAr: "أعلى يسار", labelEn: "Top Left" },
-                { key: "top-right", labelAr: "أعلى يمين", labelEn: "Top Right" },
-                {
-                  key: "bottom-left",
-                  labelAr: "أسفل يسار",
-                  labelEn: "Bottom Left"
-                },
-                {
-                  key: "bottom-right",
-                  labelAr: "أسفل يمين",
-                  labelEn: "Bottom Right"
-                }
-              ] as { key: PopupPosition; labelAr: string; labelEn: string }[]
-            ).map((pos) => {
-              const isActive = config.popupPosition === pos.key
+        </div>
+        <ChevronDown
+          size={14}
+          className="shrink-0 text-muted-foreground transition-transform"
+          style={{ transform: open ? "rotate(180deg)" : "none" }}
+        />
+      </button>
+
+      {open && (
+        <div className="animate-fade-up absolute left-0 right-0 top-[calc(100%+6px)] z-50 overflow-hidden rounded-lg border border-border bg-popover shadow-xl">
+          <div className="relative border-b border-border">
+            <Search
+              size={12}
+              className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <input
+              autoFocus
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={labels.reciterSearch}
+              className="w-full bg-transparent py-2 pe-3 ps-8 text-[12.5px] outline-none"
+            />
+          </div>
+          <div className="max-h-[220px] overflow-y-auto">
+            {filtered.length === 0 && (
+              <div className="px-3 py-4 text-center text-[12px] text-muted-foreground">
+                {labels.noReciters}
+              </div>
+            )}
+            {filtered.map((item) => {
+              const active = item.id === reciter.id
               return (
                 <button
-                  key={pos.key}
+                  key={item.id}
                   type="button"
-                  onClick={() => handlePositionChange(pos.key)}
-                  className={`flex cursor-pointer items-center justify-center rounded-lg border px-2 py-2 text-[11px] font-semibold transition-all duration-150 ${
-                    isActive
-                      ? "border-[#D6A54A] bg-[#D6A54A]/15 text-[#D6A54A]"
-                      : dark
-                        ? "border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:bg-white/10"
-                        : "border-[#1F1B16]/10 bg-[#F1ECE4]/50 text-[#1F1B16]/60 hover:border-[#1F1B16]/20 hover:bg-[#F1ECE4]"
+                  onClick={() => {
+                    setReciter(item)
+                    setOpen(false)
+                  }}
+                  className={`flex w-full cursor-pointer items-center gap-2.5 border-none px-3 py-2.5 text-start transition-colors ${
+                    active ? "bg-secondary" : "bg-transparent hover:bg-secondary/60"
                   }`}
                 >
-                  <span className="flex items-center gap-1.5">
-                    <span
-                      className={`inline-block h-1.5 w-1.5 rounded-full ${
-                        isActive
-                          ? "bg-[#D6A54A]"
-                          : dark
-                            ? "bg-white/30"
-                            : "bg-[#1F1B16]/30"
-                      }`}
-                      style={{
-                        boxShadow: isActive
-                          ? "0 0 6px rgba(214,165,74,0.5)"
-                          : "none"
-                      }}
-                    />
-                    {isRtl ? pos.labelAr : pos.labelEn}
-                  </span>
+                  <Avatar reciter={item} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px]" style={{ fontWeight: 600 }}>
+                      {item.name}
+                    </div>
+                    <div className="truncate font-serif text-[11px] text-muted-foreground">
+                      {item.arabicName}
+                    </div>
+                  </div>
+                  {active && <Check size={13} className="shrink-0 text-accent" />}
                 </button>
               )
             })}
           </div>
         </div>
+      )}
+    </div>
+  )
+}
 
-        {/* Exclude current site */}
-        {currentHostname && (
-          <button
-            type="button"
-            onClick={handleExcludeCurrentSite}
-            className={`flex w-full cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors duration-150 ${
-              isCurrentExcluded
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
-                : dark
-                  ? "border-red-700 bg-red-900/40 text-red-400 hover:bg-red-900/60"
-                  : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-            }`}
-            style={{ textAlign: isRtl ? "right" : "left" }}
-          >
-            <span className="flex-1">
-              {isCurrentExcluded ? (
-                <>
-                  <span className="font-medium">{labels.reEnableBtn}</span>{" "}
-                  <span className="text-xs opacity-75">
-                    ({currentHostname})
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="font-medium">{labels.excludeBtn}</span>{" "}
-                  <span className="text-xs opacity-75">
-                    ({currentHostname})
-                  </span>
-                </>
-              )}
-            </span>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-4 w-4 flex-shrink-0"
-            >
-              {isCurrentExcluded ? (
-                <path d="M20 6L9 17l-5-5" />
-              ) : (
-                <>
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M4.93 4.93l14.14 14.14" />
-                </>
-              )}
-            </svg>
-          </button>
-        )}
+function Avatar({ reciter }: { reciter: ReciterOption }) {
+  return (
+    <div
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px]"
+      style={{
+        background: `linear-gradient(135deg, hsl(${reciter.hue} 50% 70%), hsl(${reciter.hue} 60% 50%))`,
+        color: "#fff",
+        fontWeight: 700,
+        letterSpacing: "0.02em"
+      }}
+    >
+      {reciter.initials}
+    </div>
+  )
+}
 
-        {/* Favorites list — collapsible */}
-        <div>
-          <button
-            type="button"
-            onClick={() => setFavoritesOpen(!favoritesOpen)}
-            className={`m-0 flex w-full cursor-pointer items-center justify-between border-none bg-transparent p-0 text-xs font-semibold uppercase tracking-wide ${textSecondary}`}
-          >
-            <span>
-              {labels.favoritesTitle}{" "}
-              <span className="opacity-60">({favorites.length})</span>
-            </span>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-3.5 w-3.5 transition-transform duration-200"
-              style={{
-                transform: favoritesOpen ? "rotate(180deg)" : "rotate(0deg)"
-              }}
-            >
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
-          {favoritesOpen && (
-            <div className="mt-2 space-y-2">
-              <input
-                type="search"
-                value={favoriteSearch}
-                onChange={(e) => setFavoriteSearch(e.target.value)}
-                placeholder={labels.favoritesSearch}
-                className={`w-full rounded-md border px-3 py-2 text-xs outline-none transition-colors focus:border-[#D6A54A] focus:ring-1 focus:ring-[#D6A54A] ${selectBg}`}
-              />
-              {favorites.length === 0 ? (
-                <p className={`m-0 rounded-md ${siteBg} px-3 py-2 text-xs ${siteText}`}>
-                  {labels.noFavorites}
-                </p>
-              ) : filteredFavorites.length === 0 ? (
-                <p className={`m-0 rounded-md ${siteBg} px-3 py-2 text-xs ${siteText}`}>
-                  {labels.noFavoriteResults}
-                </p>
-              ) : (
-                <div className="max-h-[180px] space-y-1 overflow-y-auto">
-                  {filteredFavorites.map((favorite) => (
-                    <div
-                      key={favorite.id}
-                      className={`rounded-md ${siteBg} px-3 py-2`}
-                    >
-                      <div className="mb-1 flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className={`m-0 text-xs font-semibold ${textLabel}`}>
-                            {isRtl
-                              ? favorite.surahArabicName
-                              : favorite.surahName}{" "}
-                            <span className={textSecondary}>
-                              {favorite.surahNumber}:{favorite.ayahNumber}
-                            </span>
-                          </p>
-                          <p
-                            className={`m-0 line-clamp-2 text-xs leading-relaxed ${siteText}`}
-                            dir={isRtl ? "rtl" : "ltr"}
-                          >
-                            {isRtl ? favorite.arabicText : favorite.translation}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFavorite(favorite.id)}
-                          aria-label={`${labels.remove} ${favorite.surahNumber}:${favorite.ayahNumber}`}
-                          className={`flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded border-none bg-transparent p-0 transition-colors hover:text-red-500 ${dark ? "text-gray-500" : "text-gray-400"}`}
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="h-3 w-3"
-                          >
-                            <path d="M18 6L6 18M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+function PositionPicker({
+  labels,
+  value,
+  onChange
+}: {
+  labels: (typeof t)["en"]
+  value: PopupPosition
+  onChange: (value: PopupPosition) => void
+}) {
+  const corners: { id: PopupPosition; x: string; y: string }[] = [
+    { id: "top-left", x: "12%", y: "18%" },
+    { id: "top-right", x: "88%", y: "18%" },
+    { id: "bottom-left", x: "12%", y: "82%" },
+    { id: "bottom-right", x: "88%", y: "82%" }
+  ]
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-3">
+      <div className="relative aspect-[16/9] overflow-hidden rounded-md border border-border bg-background">
+        <div className="absolute left-0 right-0 top-0 flex h-4 items-center gap-1 border-b border-border bg-secondary px-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+        </div>
+        <div className="absolute left-3 right-3 top-7 space-y-1.5">
+          <div className="h-1 w-1/3 rounded bg-muted-foreground/20" />
+          <div className="h-1 w-full rounded bg-muted-foreground/15" />
+          <div className="h-1 w-5/6 rounded bg-muted-foreground/15" />
+          <div className="h-1 w-2/3 rounded bg-muted-foreground/15" />
         </div>
 
-        {/* Excluded sites list — collapsible */}
-        {config.excludedSites.length > 0 && (
-          <div>
+        {corners.map((corner) => {
+          const active = corner.id === value
+          return (
+            <button
+              key={corner.id}
+              type="button"
+              onClick={() => onChange(corner.id)}
+              className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer border-none bg-transparent transition-all"
+              style={{ left: corner.x, top: corner.y }}
+              aria-label={labels.positionLabels[corner.id]}
+            >
+              <div
+                className={`relative rounded-sm transition-all ${
+                  active
+                    ? "h-7 w-12 bg-accent shadow-md"
+                    : "h-5 w-9 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                }`}
+              >
+                {active && (
+                  <div className="absolute inset-1 rounded-sm bg-accent-foreground/20" />
+                )}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+      <div className="mt-2.5 flex items-center justify-between text-[11px] text-muted-foreground">
+        <span style={{ fontFamily: "var(--font-mono)" }}>
+          {value.toUpperCase()}
+        </span>
+        <span>{labels.positionLabels[value]}</span>
+      </div>
+    </div>
+  )
+}
+
+function LibraryPanel({
+  labels,
+  language,
+  favorites,
+  allFavorites,
+  search,
+  setSearch,
+  copiedId,
+  onCopy,
+  onDelete,
+  onClear
+}: {
+  labels: (typeof t)["en"]
+  language: Language
+  favorites: FavoriteAyah[]
+  allFavorites: FavoriteAyah[]
+  search: string
+  setSearch: (value: string) => void
+  copiedId: string | null
+  onCopy: (favorite: FavoriteAyah) => void
+  onDelete: (id: string) => void
+  onClear: () => void
+}) {
+  return (
+    <div className="animate-fade-up px-5 py-5">
+      {allFavorites.length > 0 && (
+        <>
+          <div className="relative mb-3">
+            <Search
+              size={14}
+              className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={labels.favoritesSearch}
+              className="w-full rounded-lg border border-border bg-card py-2.5 pe-3 ps-9 text-[13px] outline-none transition-colors focus:border-accent"
+            />
+          </div>
+
+          <div className="mb-3 flex items-center justify-between">
+            <span
+              className="text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground"
+              style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}
+            >
+              {favorites.length} {labels.savedCount}
+            </span>
             <button
               type="button"
-              onClick={() => setExcludedOpen(!excludedOpen)}
-              className={`m-0 flex w-full cursor-pointer items-center justify-between border-none bg-transparent p-0 text-xs font-semibold uppercase tracking-wide ${textSecondary}`}
+              onClick={onClear}
+              className="cursor-pointer border-none bg-transparent text-[11.5px] text-muted-foreground transition-colors hover:text-destructive"
             >
-              <span>
-                {labels.excludedTitle}{" "}
-                <span className="opacity-60">
-                  ({config.excludedSites.length})
-                </span>
-              </span>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-3.5 w-3.5 transition-transform duration-200"
-                style={{
-                  transform: excludedOpen ? "rotate(180deg)" : "rotate(0deg)"
-                }}
-              >
-                <path d="M6 9l6 6 6-6" />
-              </svg>
+              {labels.clearAll}
             </button>
-            {excludedOpen && (
-              <div className="mt-2 max-h-[120px] space-y-1 overflow-y-auto">
-                {config.excludedSites.map((site) => (
-                  <div
-                    key={site}
-                    className={`flex items-center justify-between rounded-md ${siteBg} px-3 py-1.5`}
-                  >
-                    <span className={`text-xs ${siteText}`}>{site}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveExcluded(site)}
-                      aria-label={`${labels.remove} ${site}`}
-                      className={`flex h-5 w-5 cursor-pointer items-center justify-center rounded border-none bg-transparent p-0 transition-colors hover:text-red-500 ${dark ? "text-gray-500" : "text-gray-400"}`}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-3 w-3"
-                      >
-                        <path d="M18 6L6 18M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
-      {/* Footer */}
-      <div className={`border-t ${borderColor} px-4 py-2.5`}>
-        <p className={`m-0 text-center text-[10px] ${textSecondary}`}>
-          Ayat v{chrome.runtime.getManifest().version}
+      {allFavorites.length === 0 && <EmptyLibrary labels={labels} />}
+      {allFavorites.length > 0 && favorites.length === 0 && (
+        <p className="py-8 text-center text-[13px] text-muted-foreground">
+          {labels.noFavoriteResults}
         </p>
+      )}
+
+      <div className="space-y-2">
+        {favorites.map((favorite) => (
+          <SavedCard
+            key={favorite.id}
+            favorite={favorite}
+            language={language}
+            copied={copiedId === favorite.id}
+            labels={labels}
+            onCopy={() => onCopy(favorite)}
+            onDelete={() => onDelete(favorite.id)}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function EmptyLibrary({ labels }: { labels: (typeof t)["en"] }) {
+  return (
+    <div className="px-4 py-12 text-center">
+      <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+        <Bookmark size={18} className="text-muted-foreground" />
+      </div>
+      <p className="m-0 text-[14px]" style={{ fontWeight: 600 }}>
+        {labels.noFavorites}
+      </p>
+      <p className="m-0 mt-1 text-[12px] text-muted-foreground">
+        {labels.noFavoritesHint}
+      </p>
+    </div>
+  )
+}
+
+function SavedCard({
+  favorite,
+  language,
+  copied,
+  labels,
+  onCopy,
+  onDelete
+}: {
+  favorite: FavoriteAyah
+  language: Language
+  copied: boolean
+  labels: (typeof t)["en"]
+  onCopy: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="group rounded-lg border border-border bg-card p-3.5 transition-colors hover:border-foreground/15">
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <span className="truncate text-[13px]" style={{ fontWeight: 600 }}>
+            {language === "ar" ? favorite.surahArabicName : favorite.surahName}
+          </span>
+          <span
+            className="shrink-0 text-[11px] text-muted-foreground"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            {favorite.surahNumber}:{favorite.ayahNumber}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+          <IconBtn onClick={onCopy} title={labels.copy}>
+            {copied ? (
+              <Check size={12} className="text-accent" />
+            ) : (
+              <Copy size={12} />
+            )}
+          </IconBtn>
+          <IconBtn onClick={onDelete} title={labels.delete}>
+            <Trash2 size={12} />
+          </IconBtn>
+        </div>
+      </div>
+      <p
+        className="m-0 text-right font-serif text-[15px] leading-[1.9] text-foreground"
+        dir="rtl"
+      >
+        {favorite.arabicText}
+      </p>
+      <p className="m-0 mt-1.5 text-[12px] leading-snug text-muted-foreground">
+        {favorite.translation}
+      </p>
+    </div>
+  )
+}
+
+function IconBtn({
+  onClick,
+  title,
+  children
+}: {
+  onClick: () => void
+  title: string
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+    >
+      {children}
+    </button>
+  )
+}
+
+function Switch({
+  on,
+  onChange,
+  small
+}: {
+  on: boolean
+  onChange: (value: boolean) => void
+  small?: boolean
+}) {
+  const width = small ? 32 : 40
+  const height = small ? 18 : 22
+  const thumb = small ? 14 : 18
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+      className="relative shrink-0 cursor-pointer rounded-full border-none transition-colors"
+      style={{
+        width,
+        height,
+        background: on ? "var(--accent)" : "var(--switch-background)"
+      }}
+    >
+      <span
+        className="absolute top-0.5 rounded-full bg-white shadow-sm transition-all"
+        style={{
+          width: thumb,
+          height: thumb,
+          left: on ? `${width - thumb - 2}px` : "2px"
+        }}
+      />
+    </button>
+  )
+}
+
+function Footer({ labels }: { labels: (typeof t)["en"] }) {
+  return (
+    <div className="mt-2 border-t border-border px-5 py-4">
+      <div
+        className="flex items-center justify-between text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground"
+        style={{ fontFamily: "var(--font-mono)" }}
+      >
+        <span>v{chrome.runtime.getManifest().version}</span>
+        <span className="flex items-center gap-1.5">
+          <Sparkles size={10} />
+          {labels.madeWithIntention}
+        </span>
       </div>
     </div>
   )

@@ -4,7 +4,7 @@ All notable changes to the **Ayat** extension will be documented in this file.
 
 ---
 
-## [1.4.0] — 2026-05-06
+## [2.0.0] — 2026-05-06
 
 ### ✨ New Features
 
@@ -21,6 +21,12 @@ All notable changes to the **Ayat** extension will be documented in this file.
 - **Toast Style Isolation**
   - Hardened Shadow DOM host defaults so site-level styles do not affect the toast.
   - Pinned visible toast sizing, spacing, icons, and typography to pixel values for consistent rendering across websites.
+
+- **Redesigned Toast & Popup UI**
+  - Ported the redesigned toast card, controls, progress bar, minimized restore button, and screenshot flash feedback.
+  - Ported the popup to the redesigned Settings / Library tab layout while keeping Arabic and English localization.
+  - Added redesigned controls for frequency, searchable reciter selection, visual position picking, saved ayat search, copy, delete, and clear-all actions.
+  - Added `lucide-react` icons and refreshed design tokens for the new light/dark system.
 
 ---
 
@@ -77,7 +83,7 @@ All notable changes to the **Ayat** extension will be documented in this file.
 
 ## [1.2.1] — 2026-03-05
 - ** Fix Ui bugs
-  - Enhanced the minimze button position 
+  - Enhanced the minimze button position
 ---
 
 ## [1.2.0] — 2026-03-05

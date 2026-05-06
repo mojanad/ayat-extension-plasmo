@@ -11,6 +11,7 @@
     "package": "plasmo package"
   },
   "dependencies": {
+    "lucide-react": "^1.14.0",
     "plasmo": "^0.90.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

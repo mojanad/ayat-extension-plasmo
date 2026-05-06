@@ -72,9 +72,13 @@ Use this file as the live implementation checklist. Update it whenever a task is
 
 ## Cross-Cutting
 
+- [x] Port redesigned toast UI from `Redesign Toast UI`
+- [x] Port redesigned popup Settings / Library UI
+- [x] Add `lucide-react` icon dependency
+- [x] Refresh Tailwind v3 design tokens for redesigned light/dark system
 - [x] Harden toast styles against host-page CSS inheritance
 - [x] Keep `TASKS.md` updated with every feature change
 - [x] Keep `CHANGELOG.md` updated with every shipped user-facing change
 - [ ] Bump package version before release
-- [ ] Run build before release
+- [x] Run build before release
 - [ ] Note any blocked verification steps
