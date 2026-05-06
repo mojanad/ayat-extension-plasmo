@@ -4,7 +4,7 @@ Use this file as the live implementation checklist. Update it whenever a task is
 
 ## Current Version
 
-- [ ] Confirm target package version for `v1.4.0`
+- [x] Confirm target package version for `v2.0.0`
 - [x] Update `CHANGELOG.md` for Notification Frequency Control
 
 ## Sprint B - User Control Features
@@ -41,13 +41,12 @@ Use this file as the live implementation checklist. Update it whenever a task is
 
 ### Keyboard Shortcuts
 
-- [ ] Add extension commands to manifest
-- [ ] Add background command listener
-- [ ] Add content-script message handlers
-- [ ] Add shortcut for show/hide toast
-- [ ] Add shortcut for refresh ayah
-- [ ] Add shortcut for minimize/expand
-- [ ] Update `CHANGELOG.md`
+- [x] Add document keydown listener in content script
+- [x] Add shortcut for play/pause audio (Space)
+- [x] Add shortcut for toggle favorite (B)
+- [x] Add shortcut for minimize toast (Esc)
+- [x] Add tooltips to Kbd components
+- [x] Update `CHANGELOG.md`
 
 ## Sprint C - Sharing + Discovery
 

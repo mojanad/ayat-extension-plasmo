@@ -18,6 +18,17 @@ All notable changes to the **Ayat** extension will be documented in this file.
   - Added local favorites storage with stable surah/ayah identifiers.
   - Added a searchable saved ayat list in the popup with remove controls.
 
+- **Keyboard Shortcuts**
+  - Added in-page keyboard shortcuts when the toast is focused or expanded: `Space` (Play/Pause), `B` (Bookmark/Remove), and `Esc` (Minimize).
+  - Added localized tooltips to keyboard hint badges (`<Kbd>`) in the UI.
+
+- **Audio Playback Enhancements**
+  - Added a repeat/loop toggle button that natively loops the current ayah's audio.
+  - Added a minimize button to the expanded toast control bar.
+
+- **Typography & Font Consistency**
+  - Unified font rendering across the toast and popup library to consistently use the UthmanicHafs font stack for all Arabic verse text.
+
 - **Toast Style Isolation**
   - Hardened Shadow DOM host defaults so site-level styles do not affect the toast.
   - Pinned visible toast sizing, spacing, icons, and typography to pixel values for consistent rendering across websites.

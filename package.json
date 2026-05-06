@@ -1,7 +1,7 @@
 {
   "name": "ayat",
   "displayName": "Ayat",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "description": "Daily Ayat — gentle reminders with verses from the Holy Quran on your browsing journey.",
   "scripts": {
     "predev": "mkdir -p build/chrome-mv3-dev/assets/fonts/Amiri_Quran build/chrome-mv3-dev/assets/fonts/UthmanicHafs && cp assets/fonts/Amiri_Quran/AmiriQuran-Regular.ttf build/chrome-mv3-dev/assets/fonts/Amiri_Quran/ && cp 'assets/fonts/UthmanicHafs/KFGQPC Uthmanic Script HAFS.otf' build/chrome-mv3-dev/assets/fonts/UthmanicHafs/",
