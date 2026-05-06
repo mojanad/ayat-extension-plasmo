@@ -8,8 +8,12 @@ import {
   type Language,
   type PopupPosition,
   type Theme,
+  addFavorite,
   getConfig,
-  getHostname
+  getFavoriteId,
+  getHostname,
+  isFavoriteAyah,
+  removeFavorite
 } from "../storage"
 
 export const config: PlasmoCSConfig = {
@@ -28,6 +32,19 @@ export const getStyle: PlasmoGetStyle = () => {
   )
 
   const fontFaces = `
+    :host {
+      all: initial;
+      color-scheme: light dark;
+      direction: ltr;
+      font-family: ${ARABIC_FONT};
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+    :host, :host * {
+      box-sizing: border-box;
+    }
     @font-face {
       font-family: 'UthmanicHafs';
       font-style: normal;
@@ -57,7 +74,7 @@ const CloseSvg = () => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-4 w-4"
+    className="h-[16px] w-[16px]"
   >
     <path d="M18 6L6 18M6 6l12 12" />
   </svg>
@@ -71,7 +88,7 @@ const CollapseSvg = () => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-4 w-4"
+    className="h-[16px] w-[16px]"
   >
     <polyline points="4 14 10 14 10 20" />
     <polyline points="20 10 14 10 14 4" />
@@ -88,7 +105,7 @@ const CopySvg = () => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-3.5 w-3.5"
+    className="h-[14px] w-[14px]"
   >
     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
@@ -103,10 +120,24 @@ const CameraIcon = () => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-3.5 w-3.5"
+    className="h-[14px] w-[14px]"
   >
     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
     <circle cx="12" cy="13" r="4" />
+  </svg>
+)
+
+const StarSvg = ({ filled = false }: { filled?: boolean }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill={filled ? "currentColor" : "none"}
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-[14px] w-[14px]"
+  >
+    <path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1L12 2z" />
   </svg>
 )
 
@@ -114,7 +145,7 @@ const QuranSvg = () => (
   <svg
     viewBox="0 0 200 200"
     xmlns="http://www.w3.org/2000/svg"
-    className="h-6 w-6"
+    className="h-[24px] w-[24px]"
   >
     <path
       d="M100,20 C55.82,20 20,55.82 20,100 C20,144.18 55.82,180 100,180 C118.35,180 135.15,173.81 148.54,163.41 C115.21,168.14 83.33,142.5 83.33,100 C83.33,57.5 115.21,31.86 148.54,36.59 C135.15,26.19 118.35,20 100,20 Z"
@@ -128,13 +159,13 @@ const QuranSvg = () => (
 )
 
 const PlaySvg = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+  <svg viewBox="0 0 24 24" fill="currentColor" className="h-[16px] w-[16px]">
     <path d="M8 5v14l11-7z" />
   </svg>
 )
 
 const PauseSvg = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+  <svg viewBox="0 0 24 24" fill="currentColor" className="h-[16px] w-[16px]">
     <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
   </svg>
 )
@@ -147,7 +178,7 @@ const CheckSvg = () => (
     strokeWidth="2.5"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-3.5 w-3.5"
+    className="h-[14px] w-[14px]"
   >
     <path d="M20 6L9 17l-5-5" />
   </svg>
@@ -161,7 +192,7 @@ const ChevronLeftSvg = () => (
     strokeWidth="2.5"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-3.5 w-3.5"
+    className="h-[14px] w-[14px]"
   >
     <path d="M15 18l-6-6 6-6" />
   </svg>
@@ -175,7 +206,7 @@ const ChevronRightSvg = () => (
     strokeWidth="2.5"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-3.5 w-3.5"
+    className="h-[14px] w-[14px]"
   >
     <path d="M9 18l6-6-6-6" />
   </svg>
@@ -189,7 +220,7 @@ const RefreshSvg = () => (
     strokeWidth="2.25"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-3.5 w-3.5"
+    className="h-[14px] w-[14px]"
   >
     <path d="M21 12a9 9 0 0 1-15.1 6.6" />
     <path d="M3 12A9 9 0 0 1 18.1 5.4" />
@@ -372,6 +403,7 @@ function AyatToast() {
   const [navigating, setNavigating] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [isFontsReady, setIsFontsReady] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const imageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -529,6 +561,28 @@ function AyatToast() {
     if (viewState !== "loading") return
     setViewState("toast")
   }, [allowed, ayahData, isFontsReady, viewState])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function syncFavoriteState() {
+      if (!ayahData) {
+        setIsFavorite(false)
+        return
+      }
+
+      const favorite = await isFavoriteAyah(
+        ayahData.surahNumber,
+        ayahData.ayahNumber
+      )
+      if (!cancelled) setIsFavorite(favorite)
+    }
+
+    syncFavoriteState()
+    return () => {
+      cancelled = true
+    }
+  }, [ayahData])
 
   // Listen for config changes in real-time
   useEffect(() => {
@@ -793,6 +847,28 @@ function AyatToast() {
         if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
         copyTimerRef.current = setTimeout(() => setCopyFeedback("idle"), 2000)
       })
+  }
+
+  async function toggleFavorite() {
+    if (!ayahData || navigating) return
+
+    const id = getFavoriteId(ayahData.surahNumber, ayahData.ayahNumber)
+    if (isFavorite) {
+      await removeFavorite(id)
+      setIsFavorite(false)
+      return
+    }
+
+    await addFavorite({
+      surahNumber: ayahData.surahNumber,
+      ayahNumber: ayahData.ayahNumber,
+      surahName: ayahData.surahName,
+      surahArabicName: ayahData.surahArabicName,
+      arabicText: ayahData.arabicText,
+      translation: ayahData.translation,
+      reciter
+    })
+    setIsFavorite(true)
   }
 
   // Save toast as PNG image to device
@@ -1137,10 +1213,10 @@ function AyatToast() {
 
   const dark = theme === "dark"
   const skeletonTone = dark ? "bg-white/10" : "bg-[#1F1B16]/10"
-  const skeletonShine = "animate-pulse rounded-md"
+  const skeletonShine = "animate-pulse rounded-[6px]"
 
   // Action button style
-  const actionBtn = `flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-0 transition-[background,color] duration-150 ${
+  const actionBtn = `flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[6px] border-none bg-transparent p-0 transition-[background,color] duration-150 ${
     dark
       ? "text-white/50 hover:bg-white/10 hover:text-[#F1ECE4]"
       : "text-[#1F1B16]/50 hover:bg-[#1F1B16]/[0.06] hover:text-[#1F1B16]"
@@ -1150,14 +1226,14 @@ function AyatToast() {
   const positionClasses = (() => {
     switch (popupPosition) {
       case "top-left":
-        return "top-6 left-6"
+        return "top-[24px] left-[24px]"
       case "top-right":
-        return "top-6 right-6"
+        return "top-[24px] right-[24px]"
       case "bottom-left":
-        return "bottom-6 left-6"
+        return "bottom-[24px] left-[24px]"
       case "bottom-right":
       default:
-        return "bottom-6 right-6"
+        return "bottom-[24px] right-[24px]"
     }
   })()
 
@@ -1166,23 +1242,23 @@ function AyatToast() {
       <div ref={wrapperRef}>
         <div
           style={{ fontFamily: ARABIC_FONT }}
-          className={`fixed ${positionClasses} z-[2147483647] flex w-[min(380px,calc(100vw-48px))] items-center gap-3 rounded-xl border px-4 py-3 motion-reduce:animate-none ${
+          className={`fixed ${positionClasses} z-[2147483647] flex w-[min(380px,calc(100vw-48px))] items-center gap-[12px] rounded-[12px] border px-[16px] py-[12px] motion-reduce:animate-none ${
             dark
               ? "border-white/10 bg-[#0F1C2C] shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
               : "border-[#1F1B16]/10 bg-[#F1ECE4] shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
           } animate-toast-in`}
         >
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#D6A54A] border-t-transparent" />
+          <div className="h-[20px] w-[20px] animate-spin rounded-full border-2 border-[#D6A54A] border-t-transparent" />
           <div className="min-w-0">
             <p
-              className={`m-0 text-sm font-semibold ${
+              className={`m-0 text-[14px] font-semibold leading-[20px] ${
                 dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"
               }`}
             >
               {language === "ar" ? "جارٍ التحميل…" : "Loading…"}
             </p>
             <p
-              className={`m-0 truncate text-xs ${
+              className={`m-0 truncate text-[12px] leading-[16px] ${
                 dark ? "text-white/50" : "text-[#1F1B16]/60"
               }`}
             >
@@ -1201,23 +1277,23 @@ function AyatToast() {
       <div ref={wrapperRef}>
         <div
           style={{ fontFamily: ARABIC_FONT }}
-          className={`fixed ${positionClasses} z-[2147483647] flex max-w-[min(380px,calc(100vw-48px))] flex-col rounded-xl border px-4 py-4 motion-reduce:animate-none ${
+          className={`fixed ${positionClasses} z-[2147483647] flex max-w-[min(380px,calc(100vw-48px))] flex-col rounded-[12px] border px-[16px] py-[16px] motion-reduce:animate-none ${
             dark
               ? "border-white/10 bg-[#0F1C2C] shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
               : "border-[#1F1B16]/10 bg-[#F1ECE4] shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
           } animate-toast-in`}
         >
-          <div className="mb-2 flex items-center justify-between gap-3">
+          <div className="mb-[8px] flex items-center justify-between gap-[12px]">
             <div className="min-w-0">
               <p
-                className={`m-0 text-sm font-semibold ${
+                className={`m-0 text-[14px] font-semibold leading-[20px] ${
                   dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"
                 }`}
               >
                 {language === "ar" ? "تعذر جلب الآية" : "Couldn’t load ayah"}
               </p>
               <p
-                className={`m-0 truncate text-xs ${
+                className={`m-0 truncate text-[12px] leading-[16px] ${
                   dark ? "text-white/50" : "text-[#1F1B16]/60"
                 }`}
                 title={fetchError || undefined}
@@ -1238,14 +1314,14 @@ function AyatToast() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-[8px]">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 startInitialLoad()
               }}
-              className={`flex-1 cursor-pointer rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+              className={`flex-1 cursor-pointer rounded-[8px] border px-[12px] py-[8px] text-[14px] font-semibold leading-[20px] transition-colors ${
                 dark
                   ? "border-white/10 bg-white/5 text-[#F1ECE4] hover:bg-white/10"
                   : "border-[#1F1B16]/10 bg-white text-[#0F1C2C] hover:bg-[#1F1B16]/[0.04]"
@@ -1267,7 +1343,7 @@ function AyatToast() {
           type="button"
           onClick={expand}
           aria-label="Show Ayat"
-          className={`fixed ${positionClasses} z-[2147483647] flex h-12 w-12 animate-toast-in cursor-pointer items-center justify-center rounded-full border shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl ${
+          className={`fixed ${positionClasses} z-[2147483647] flex h-[48px] w-[48px] animate-toast-in cursor-pointer items-center justify-center rounded-full border shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl ${
             dark
               ? "border-white/10 bg-[#0F1C2C] text-[#D6A54A] hover:bg-white/5"
               : "border-[#1F1B16]/10 bg-[#F1ECE4] text-[#D6A54A] hover:bg-[#1F1B16]/5"
@@ -1286,7 +1362,7 @@ function AyatToast() {
       <div
         ref={toastRef}
         style={{ fontFamily: ARABIC_FONT }}
-        className={`fixed ${positionClasses} z-[2147483647] flex max-w-[min(380px,calc(100vw-48px))] flex-col rounded-xl border py-4 pl-4 pr-4 transform-gpu will-change-transform motion-reduce:animate-none ${
+        className={`fixed ${positionClasses} z-[2147483647] flex w-[min(380px,calc(100vw-48px))] flex-col rounded-[12px] border px-[16px] py-[16px] transform-gpu will-change-transform motion-reduce:animate-none ${
           dark
             ? "border-white/10 bg-[#0F1C2C] shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
             : "border-[#1F1B16]/10 bg-[#F1ECE4] shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
@@ -1297,7 +1373,7 @@ function AyatToast() {
         {/* Top action buttons row */}
         <div
           data-actions
-          className="absolute right-2 top-2 flex items-center gap-0.5"
+          className="absolute right-[8px] top-[8px] flex items-center gap-[2px]"
         >
           {/* Close */}
           <button
@@ -1314,10 +1390,10 @@ function AyatToast() {
         </div>
 
         {/* Surah info + play button */}
-        <div className="mb-2 flex items-center gap-2 px-1.5 pr-28" dir="ltr">
+        <div className="mb-[8px] flex items-center gap-[8px] px-[6px] pr-[112px]" dir="ltr">
           <span
             style={{ fontFamily: ARABIC_FONT }}
-            className={`inline-flex h-6 min-w-[24px] items-center justify-center rounded-md px-1.5 text-xs font-bold ${
+            className={`inline-flex h-[24px] min-w-[24px] items-center justify-center rounded-[6px] px-[6px] text-[12px] font-bold leading-[16px] ${
               dark
                 ? "bg-[#D6A54A]/20 text-[#D6A54A]"
                 : "bg-[#D6A54A]/15 text-[#D6A54A]"
@@ -1327,13 +1403,13 @@ function AyatToast() {
           </span>
           <span
             style={{ fontFamily: ARABIC_FONT }}
-            className={`text-xs font-semibold ${dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"}`}
+            className={`text-[12px] font-semibold leading-[16px] ${dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"}`}
           >
             {displaySurahName}
           </span>
           <span
             style={{ fontFamily: ARABIC_FONT }}
-            className={`text-[10px] ${dark ? "text-white/50" : "text-[#1F1B16]/60"}`}
+            className={`text-[10px] leading-[14px] ${dark ? "text-white/50" : "text-[#1F1B16]/60"}`}
           >
             {isRtl
               ? `آية ${ayahData.ayahNumber}`
@@ -1347,7 +1423,7 @@ function AyatToast() {
               toggleAudio()
             }}
             aria-label={isPlaying ? "Pause" : "Play"}
-            className={` flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none transition-all duration-150 ${
+            className={` flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-full border-none transition-all duration-150 ${
               isPlaying
                 ? "bg-[#D6A54A] text-[#1F1B16] shadow-sm hover:scale-105"
                 : dark
@@ -1362,35 +1438,35 @@ function AyatToast() {
         {/* Ayah text — selectable, no click-to-collapse */}
         <div
           data-body
-          className="min-w-0 select-text px-1.5"
+          className="min-w-0 select-text px-[6px]"
           dir={isRtl ? "rtl" : "ltr"}
           style={{ textAlign: isRtl ? "right" : "left" }}
         >
           <p
             style={{ fontFamily: ARABIC_FONT }}
-            className={`m-0 font-normal leading-loose ${
+            className={`m-0 font-normal ${
               dark ? "text-[#F1ECE4]" : "text-[#0F1C2C]"
-            } ${isRtl ? "text-[0.9375rem]" : "text-sm"}`}
+            } ${isRtl ? "text-[15px] leading-[34px]" : "text-[14px] leading-[24px]"}`}
           >
             {navigating ? (
-              <span className="block py-1">
-                <span className={`mb-2 block h-4 w-full ${skeletonShine} ${skeletonTone}`} />
-                <span className={`mb-2 block h-4 w-11/12 ${skeletonShine} ${skeletonTone}`} />
-                <span className={`block h-4 w-2/3 ${skeletonShine} ${skeletonTone}`} />
+              <span className="block py-[4px]">
+                <span className={`mb-[8px] block h-[16px] w-full ${skeletonShine} ${skeletonTone}`} />
+                <span className={`mb-[8px] block h-[16px] w-11/12 ${skeletonShine} ${skeletonTone}`} />
+                <span className={`block h-[16px] w-2/3 ${skeletonShine} ${skeletonTone}`} />
               </span>
             ) : (
               displayText
             )}
           </p>
         </div>
-        <section className="mt-2 flex items-center justify-between gap-2 px-1.5">
+        <section className="mt-[8px] flex items-center justify-between gap-[8px] px-[6px]">
           {/* Left group: collapse + navigation */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-[4px]">
             {/* Collapse */}
             <button
               type="button"
               aria-label="Collapse"
-              className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-0 transition-[background,color] duration-150 ${
+              className={`flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[6px] border-none bg-transparent p-0 transition-[background,color] duration-150 ${
                 dark
                   ? "text-[#D6A54A] hover:bg-white/10 hover:text-[#D7A542]"
                   : "text-[#D6A54A] hover:bg-[#1F1B16]/[0.06] hover:text-[#D7A542]"
@@ -1405,7 +1481,7 @@ function AyatToast() {
 
             {/* Divider */}
             <div
-              className={`mx-0.5 h-4 w-px ${
+              className={`mx-[2px] h-[16px] w-px ${
                 dark ? "bg-white/10" : "bg-[#1F1B16]/10"
               }`}
             />
@@ -1452,8 +1528,23 @@ function AyatToast() {
             </button>
           </div>
 
-          {/* Right group: copy + screenshot */}
-          <div className="flex items-center gap-2">
+          {/* Right group: favorite + copy + screenshot */}
+          <div className="flex items-center gap-[8px]">
+            {/* Favorite */}
+            <button
+              type="button"
+              aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
+              disabled={navigating}
+              className={`${actionBtn} ${
+                isFavorite ? "text-[#D6A54A]" : ""
+              } ${navigating ? "opacity-40 pointer-events-none" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleFavorite()
+              }}
+            >
+              <StarSvg filled={isFavorite} />
+            </button>
             {/* Copy text */}
             <button
               type="button"
@@ -1485,7 +1576,7 @@ function AyatToast() {
         {fetchError && !navigating && (
           <div
             role="status"
-            className={`mx-1.5 mt-3 rounded-lg border px-3 py-2 text-xs leading-snug ${
+            className={`mx-[6px] mt-[12px] rounded-[8px] border px-[12px] py-[8px] text-[12px] leading-[16px] ${
               dark
                 ? "border-red-300/20 bg-red-300/10 text-red-100"
                 : "border-red-700/15 bg-red-50 text-red-900"

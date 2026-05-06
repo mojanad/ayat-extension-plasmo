@@ -13,6 +13,15 @@ All notable changes to the **Ayat** extension will be documented in this file.
   - Added session-based show/hide logic so the toast can skip fetching when the selected frequency says not to show.
   - Added a configurable page interval for the every-N-pages mode.
 
+- **Favorite / Bookmark Verses**
+  - Added a favorite toggle to the toast for saving or removing the current ayah.
+  - Added local favorites storage with stable surah/ayah identifiers.
+  - Added a searchable saved ayat list in the popup with remove controls.
+
+- **Toast Style Isolation**
+  - Hardened Shadow DOM host defaults so site-level styles do not affect the toast.
+  - Pinned visible toast sizing, spacing, icons, and typography to pixel values for consistent rendering across websites.
+
 ---
 
 ## [1.3.1] — 2026-05-06

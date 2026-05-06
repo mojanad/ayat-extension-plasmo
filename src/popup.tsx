@@ -5,12 +5,15 @@ import logoUrl from "data-base64:../assets/icon-dark.png"
 import { quraa } from "./data"
 import {
   type AyatConfig,
+  type FavoriteAyah,
   type Language,
   type NotificationFrequency,
   type PopupPosition,
   type Theme,
   getConfig,
+  getFavorites,
   getHostname,
+  removeFavorite,
   setConfig
 } from "./storage"
 import "./style.css"
@@ -38,6 +41,10 @@ const t = {
     excludeBtn: "استبعاد هذا الموقع",
     reEnableBtn: "إعادة تفعيل",
     excludedTitle: "المواقع المستبعدة",
+    favoritesTitle: "الآيات المحفوظة",
+    favoritesSearch: "ابحث في المحفوظات",
+    noFavorites: "لا توجد آيات محفوظة بعد",
+    noFavoriteResults: "لا توجد نتائج",
     remove: "إزالة"
   },
   en: {
@@ -62,6 +69,10 @@ const t = {
     excludeBtn: "Exclude this site",
     reEnableBtn: "Re-enable",
     excludedTitle: "Excluded Sites",
+    favoritesTitle: "Saved Ayat",
+    favoritesSearch: "Search saved ayat",
+    noFavorites: "No saved ayat yet",
+    noFavoriteResults: "No results",
     remove: "Remove"
   }
 }
@@ -100,6 +111,9 @@ function Popup() {
   const [currentHostname, setCurrentHostname] = useState<string>("")
   const [isCurrentExcluded, setIsCurrentExcluded] = useState(false)
   const [excludedOpen, setExcludedOpen] = useState(false)
+  const [favorites, setFavorites] = useState<FavoriteAyah[]>([])
+  const [favoritesOpen, setFavoritesOpen] = useState(false)
+  const [favoriteSearch, setFavoriteSearch] = useState("")
 
   const lang = config?.language || "ar"
   const isRtl = lang === "ar"
@@ -108,6 +122,7 @@ function Popup() {
 
   useEffect(() => {
     getConfig().then(setLocalConfig)
+    getFavorites().then(setFavorites)
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]?.url) {
@@ -191,6 +206,11 @@ function Popup() {
     setLocalConfig(updated)
   }
 
+  async function handleRemoveFavorite(id: string) {
+    const updated = await removeFavorite(id)
+    setFavorites(updated)
+  }
+
   if (!config) {
     return (
       <div
@@ -218,6 +238,20 @@ function Popup() {
     ? "bg-white/5 text-white/70 hover:bg-white/10"
     : "bg-[#F1ECE4]/50 text-slate-600 hover:bg-[#F1ECE4]"
   const segBorder = dark ? "border-white/10" : "border-[#1F1B16]/20"
+  const normalizedFavoriteSearch = favoriteSearch.trim().toLowerCase()
+  const filteredFavorites = favorites.filter((favorite) => {
+    if (!normalizedFavoriteSearch) return true
+    return [
+      favorite.surahName,
+      favorite.surahArabicName,
+      favorite.arabicText,
+      favorite.translation,
+      `${favorite.surahNumber}:${favorite.ayahNumber}`
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedFavoriteSearch)
+  })
 
   return (
     <div
@@ -571,6 +605,100 @@ function Popup() {
             </svg>
           </button>
         )}
+
+        {/* Favorites list — collapsible */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setFavoritesOpen(!favoritesOpen)}
+            className={`m-0 flex w-full cursor-pointer items-center justify-between border-none bg-transparent p-0 text-xs font-semibold uppercase tracking-wide ${textSecondary}`}
+          >
+            <span>
+              {labels.favoritesTitle}{" "}
+              <span className="opacity-60">({favorites.length})</span>
+            </span>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5 transition-transform duration-200"
+              style={{
+                transform: favoritesOpen ? "rotate(180deg)" : "rotate(0deg)"
+              }}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          {favoritesOpen && (
+            <div className="mt-2 space-y-2">
+              <input
+                type="search"
+                value={favoriteSearch}
+                onChange={(e) => setFavoriteSearch(e.target.value)}
+                placeholder={labels.favoritesSearch}
+                className={`w-full rounded-md border px-3 py-2 text-xs outline-none transition-colors focus:border-[#D6A54A] focus:ring-1 focus:ring-[#D6A54A] ${selectBg}`}
+              />
+              {favorites.length === 0 ? (
+                <p className={`m-0 rounded-md ${siteBg} px-3 py-2 text-xs ${siteText}`}>
+                  {labels.noFavorites}
+                </p>
+              ) : filteredFavorites.length === 0 ? (
+                <p className={`m-0 rounded-md ${siteBg} px-3 py-2 text-xs ${siteText}`}>
+                  {labels.noFavoriteResults}
+                </p>
+              ) : (
+                <div className="max-h-[180px] space-y-1 overflow-y-auto">
+                  {filteredFavorites.map((favorite) => (
+                    <div
+                      key={favorite.id}
+                      className={`rounded-md ${siteBg} px-3 py-2`}
+                    >
+                      <div className="mb-1 flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className={`m-0 text-xs font-semibold ${textLabel}`}>
+                            {isRtl
+                              ? favorite.surahArabicName
+                              : favorite.surahName}{" "}
+                            <span className={textSecondary}>
+                              {favorite.surahNumber}:{favorite.ayahNumber}
+                            </span>
+                          </p>
+                          <p
+                            className={`m-0 line-clamp-2 text-xs leading-relaxed ${siteText}`}
+                            dir={isRtl ? "rtl" : "ltr"}
+                          >
+                            {isRtl ? favorite.arabicText : favorite.translation}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFavorite(favorite.id)}
+                          aria-label={`${labels.remove} ${favorite.surahNumber}:${favorite.ayahNumber}`}
+                          className={`flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded border-none bg-transparent p-0 transition-colors hover:text-red-500 ${dark ? "text-gray-500" : "text-gray-400"}`}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="h-3 w-3"
+                          >
+                            <path d="M18 6L6 18M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Excluded sites list — collapsible */}
         {config.excludedSites.length > 0 && (
