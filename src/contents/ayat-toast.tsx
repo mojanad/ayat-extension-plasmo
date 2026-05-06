@@ -3,7 +3,14 @@ import type { PlasmoCSConfig, PlasmoGetStyle } from "plasmo"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import logoUrl from "data-base64:../../assets/icon-dark.png"
 import { allSurahs, quraa } from "../data"
-import { type Language, type PopupPosition, type Theme, getConfig, getHostname } from "../storage"
+import {
+  type AyatConfig,
+  type Language,
+  type PopupPosition,
+  type Theme,
+  getConfig,
+  getHostname
+} from "../storage"
 
 export const config: PlasmoCSConfig = {
   matches: ["http://*/*", "https://*/*"]
@@ -287,6 +294,65 @@ function isQuranEncAyaResponse(
   )
 }
 
+const FREQUENCY_SHOWN_KEY = "ayatFrequencyShownThisSession"
+const FREQUENCY_PAGE_COUNT_KEY = "ayatFrequencyPageCount"
+
+async function getSessionValue<T>(key: string, fallback: T): Promise<T> {
+  try {
+    const storageSession = chrome.storage.session
+    if (storageSession) {
+      const result = await storageSession.get(key)
+      return (result[key] as T) ?? fallback
+    }
+  } catch {
+    // Fall back to window sessionStorage below.
+  }
+
+  try {
+    const value = window.sessionStorage.getItem(key)
+    return value === null ? fallback : (JSON.parse(value) as T)
+  } catch {
+    return fallback
+  }
+}
+
+async function setSessionValue<T>(key: string, value: T): Promise<void> {
+  try {
+    const storageSession = chrome.storage.session
+    if (storageSession) {
+      await storageSession.set({ [key]: value })
+      return
+    }
+  } catch {
+    // Fall back to window sessionStorage below.
+  }
+
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Ignore storage failures and let the toast show normally.
+  }
+}
+
+async function shouldShowToastForFrequency(cfg: AyatConfig): Promise<boolean> {
+  if (cfg.notificationFrequency === "firstPerSession") {
+    const alreadyShown = await getSessionValue(FREQUENCY_SHOWN_KEY, false)
+    if (alreadyShown) return false
+    await setSessionValue(FREQUENCY_SHOWN_KEY, true)
+    return true
+  }
+
+  if (cfg.notificationFrequency === "everyNPages") {
+    const interval = Math.max(cfg.notificationEveryNPages || 3, 2)
+    const previousCount = await getSessionValue(FREQUENCY_PAGE_COUNT_KEY, 0)
+    const nextCount = previousCount + 1
+    await setSessionValue(FREQUENCY_PAGE_COUNT_KEY, nextCount)
+    return nextCount === 1 || (nextCount - 1) % interval === 0
+  }
+
+  return true
+}
+
 function AyatToast() {
   const [ayahData, setAyahData] = useState<AyahData | null>(null)
   const [viewState, setViewState] = useState<ViewState>("loading")
@@ -433,6 +499,13 @@ function AyatToast() {
         setPopupPosition(cfg.popupPosition || "bottom-right")
 
         if (!cfg.enabled || cfg.excludedSites.includes(hostname)) {
+          setAllowed(false)
+          setViewState("hidden")
+          return
+        }
+
+        const shouldShow = await shouldShowToastForFrequency(cfg)
+        if (!shouldShow) {
           setAllowed(false)
           setViewState("hidden")
           return

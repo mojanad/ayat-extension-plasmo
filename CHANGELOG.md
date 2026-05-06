@@ -4,6 +4,17 @@ All notable changes to the **Ayat** extension will be documented in this file.
 
 ---
 
+## [1.4.0] — 2026-05-06
+
+### ✨ New Features
+
+- **Notification Frequency Control**
+  - Added popup settings for showing Ayat on every page, once per session, or every N pages.
+  - Added session-based show/hide logic so the toast can skip fetching when the selected frequency says not to show.
+  - Added a configurable page interval for the every-N-pages mode.
+
+---
+
 ## [1.3.1] — 2026-05-06
 
 ### 🛠 Stability & UX

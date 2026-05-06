@@ -1,6 +1,7 @@
 export type Language = "ar" | "en"
 export type Theme = "light" | "dark"
 export type PopupPosition = "bottom-right" | "bottom-left" | "top-right" | "top-left"
+export type NotificationFrequency = "everyPage" | "firstPerSession" | "everyNPages"
 
 export interface AyatConfig {
   enabled: boolean
@@ -9,6 +10,8 @@ export interface AyatConfig {
   reciter: string
   theme: Theme
   popupPosition: PopupPosition
+  notificationFrequency: NotificationFrequency
+  notificationEveryNPages: number
 }
 
 export const DEFAULT_CONFIG: AyatConfig = {
@@ -17,7 +20,9 @@ export const DEFAULT_CONFIG: AyatConfig = {
   language: "ar",
   reciter: "67",
   theme: "light",
-  popupPosition: "bottom-right"
+  popupPosition: "bottom-right",
+  notificationFrequency: "everyPage",
+  notificationEveryNPages: 3
 }
 
 export async function getConfig(): Promise<AyatConfig> {

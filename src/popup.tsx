@@ -6,6 +6,7 @@ import { quraa } from "./data"
 import {
   type AyatConfig,
   type Language,
+  type NotificationFrequency,
   type PopupPosition,
   type Theme,
   getConfig,
@@ -26,6 +27,12 @@ const t = {
     reciterDesc: "اختر قارئ القرآن",
     themeTitle: "المظهر",
     themeDesc: "مظهر الإضافة",
+    frequencyTitle: "تكرار الإشعارات",
+    frequencyDesc: "اختر عدد مرات ظهور الآية",
+    everyPage: "كل صفحة",
+    firstPerSession: "أول مرة فقط",
+    everyNPages: "كل عدة صفحات",
+    pages: "صفحات",
     positionTitle: "موضع الآية",
     positionDesc: "مكان ظهور الآية في الصفحة",
     excludeBtn: "استبعاد هذا الموقع",
@@ -44,6 +51,12 @@ const t = {
     reciterDesc: "Choose a Quran reciter",
     themeTitle: "Theme",
     themeDesc: "Extension appearance",
+    frequencyTitle: "Notification Frequency",
+    frequencyDesc: "Choose how often the ayah appears",
+    everyPage: "Every page",
+    firstPerSession: "First per session",
+    everyNPages: "Every N pages",
+    pages: "pages",
     positionTitle: "Ayah Position",
     positionDesc: "Where the ayah appears on the page",
     excludeBtn: "Exclude this site",
@@ -137,6 +150,20 @@ function Popup() {
   async function handlePositionChange(pos: PopupPosition) {
     if (!config) return
     const updated = await setConfig({ popupPosition: pos })
+    setLocalConfig(updated)
+  }
+
+  async function handleFrequencyChange(frequency: NotificationFrequency) {
+    if (!config) return
+    const updated = await setConfig({ notificationFrequency: frequency })
+    setLocalConfig(updated)
+  }
+
+  async function handleFrequencyIntervalChange(value: number) {
+    if (!config) return
+    const updated = await setConfig({
+      notificationEveryNPages: Math.min(Math.max(value, 2), 25)
+    })
     setLocalConfig(updated)
   }
 
@@ -354,6 +381,55 @@ function Popup() {
               <MoonSvg />
             </button>
           </div>
+        </div>
+
+        {/* Notification frequency selector */}
+        <div className={`rounded-lg ${cardBg} px-3 py-2.5`}>
+          <div className="mb-2">
+            <p className={`m-0 text-sm font-medium ${textLabel}`}>
+              {labels.frequencyTitle}
+            </p>
+            <p className={`m-0 text-xs ${textSecondary}`}>
+              {labels.frequencyDesc}
+            </p>
+          </div>
+          <div className={`grid overflow-hidden rounded-lg border ${segBorder}`}>
+            {(
+              [
+                { key: "everyPage", label: labels.everyPage },
+                { key: "firstPerSession", label: labels.firstPerSession },
+                { key: "everyNPages", label: labels.everyNPages }
+              ] as { key: NotificationFrequency; label: string }[]
+            ).map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => handleFrequencyChange(item.key)}
+                className={`cursor-pointer border-none px-3 py-2 text-xs font-semibold transition-colors duration-150 ${
+                  config.notificationFrequency === item.key
+                    ? "bg-[#D6A54A] text-[#1F1B16]"
+                    : segBtnInactive
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          {config.notificationFrequency === "everyNPages" && (
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="number"
+                min={2}
+                max={25}
+                value={config.notificationEveryNPages}
+                onChange={(e) =>
+                  handleFrequencyIntervalChange(Number(e.target.value) || 2)
+                }
+                className={`w-16 rounded-md border px-2 py-1.5 text-xs outline-none transition-colors focus:border-[#D6A54A] focus:ring-1 focus:ring-[#D6A54A] ${selectBg}`}
+              />
+              <span className={`text-xs ${textSecondary}`}>{labels.pages}</span>
+            </div>
+          )}
         </div>
 
         {/* Reciter selector */}
